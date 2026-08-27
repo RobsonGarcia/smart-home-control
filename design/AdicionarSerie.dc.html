@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    a { color: oklch(0.78 0.12 258); text-decoration: none; }
+    a:hover { color: oklch(0.88 0.08 258); }
+  </style>
+</helmet>
+
+<div style="width: 900px; height: 764px; display: flex; align-items: center; justify-content: center; padding: 30px; background: rgba(5, 7, 10, 0.82);">
+
+  <div style="width: 100%; border-radius: 18px; background: #0f141b; border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 24px 70px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden;">
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 24px 26px 20px; border-bottom: 1px solid rgba(255,255,255,0.07);">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <h2 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 22px; font-weight: 600; letter-spacing: -0.5px; color: #f4f8fd;">Adicionar série</h2>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: #8b98a9;">
+          <span>Grupo <span style="color: #cbd5e2;">Cargas da Casa Principal</span></span>
+          <span style="width: 3px; height: 3px; border-radius: 50%; background: #3d4756;"></span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: rgba(111,155,255,0.14); color: #6f9bff; border: 1px solid rgba(111,155,255,0.32);">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path></svg>
+            Casa Principal
+          </span>
+          <span style="width: 3px; height: 3px; border-radius: 50%; background: #3d4756;"></span>
+          <span>unidade <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; color: #cbd5e2;">W</span></span>
+        </div>
+      </div>
+      <span style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8b98a9; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"></path></svg>
+      </span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 0; flex-grow: 1; min-height: 0;">
+
+      <div style="border-right: 1px solid rgba(255,255,255,0.07); padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); color: #cbd5e2;">1</span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b98a9;">Dispositivo</span>
+          <span style="margin-left: auto; font-size: 11px; color: #5c6879;">só de Casa Principal</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09);">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#6b7889" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Z"></path><path d="m15.8 15.8 3.7 3.7"></path></svg>
+          <span style="font-size: 13px; color: #5c6879;">Buscar por nome ou IP…</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 5px; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; cursor: pointer; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);">
+            <span style="width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: oklch(0.78 0.15 158); box-shadow: 0 0 0 3px oklch(0.78 0.15 158 / 0.16);"></span>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #f2f6fb;">Medidor Quadro</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">192.168.0.20 · Cozinha</span>
+            </div>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#cbd5e2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"></path></svg>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; cursor: pointer;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: oklch(0.78 0.15 158);"></span>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #cbd5e2;">Tomada Geladeira</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">192.168.0.31 · Cozinha</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; cursor: pointer;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: oklch(0.78 0.15 158);"></span>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #cbd5e2;">Ar-condicionado</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">192.168.0.63 · Quarto Casal</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; cursor: pointer;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: oklch(0.68 0.18 25);"></span>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #cbd5e2;">Bomba Piscina</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">192.168.0.90 · Área Externa</span>
+            </div>
+            <span style="font-size: 10.5px; color: #8b98a9; white-space: nowrap;">offline</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; cursor: pointer; opacity: 0.55;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: #4e5a6b;"></span>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #8b98a9;">Sensor Cozinha</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #4e5a6b;">sem IP · sem coleta</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; opacity: 0.4;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: #4e5a6b;"></span>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #8b98a9;">Tomada Rack</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #4e5a6b;">192.168.9.12 · Escritório</span>
+            </div>
+            <span style="font-size: 10.5px; color: #8b98a9; white-space: nowrap;">outro local</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); color: #cbd5e2;">2</span>
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b98a9;">Canal (DP)</span>
+          </div>
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">mapping_json · 9 DPs</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 9px; cursor: pointer; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);">
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #f2f6fb;">Potência — Canal 1</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">cur_power_1 · numeric</span>
+            </div>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #f2f6fb; white-space: nowrap;">1.842 W</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 9px; cursor: pointer;">
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #cbd5e2;">Potência — Canal 2</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">cur_power_2 · numeric</span>
+            </div>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #cbd5e2; white-space: nowrap;">1.263 W</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 9px; cursor: pointer;">
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #cbd5e2;">Potência — Canal 3</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">cur_power_3 · numeric</span>
+            </div>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; color: #cbd5e2; white-space: nowrap;">641 W</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 9px; opacity: 0.45;">
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #8b98a9;">Energia Acumulada</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #4e5a6b;">add_ele · kWh</span>
+            </div>
+            <span style="font-size: 11px; color: #8b98a9; white-space: nowrap;">outra unidade</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 9px; opacity: 0.45;">
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="font-size: 13.5px; font-weight: 500; color: #8b98a9;">Voltagem</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #4e5a6b;">cur_voltage · V</span>
+            </div>
+            <span style="font-size: 11px; color: #8b98a9; white-space: nowrap;">outra unidade</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: 9px; cursor: pointer; border: 1px dashed rgba(255,255,255,0.14);">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8b98a9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M12 5.5v13M5.5 12h13"></path></svg>
+            <span style="font-size: 13px; color: #8b98a9;">Digitar outro código de DP</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top: 1px solid rgba(255,255,255,0.07); padding: 20px 26px 22px; display: flex; flex-direction: column; gap: 14px; background: rgba(255,255,255,0.015);">
+      <div style="display: flex; align-items: flex-end; gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 8px; flex-grow: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); color: #cbd5e2;">3</span>
+            <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b98a9;">Rótulo no gráfico</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: 9px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.14);">
+            <span style="width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; background: #d55181;"></span>
+            <span style="font-size: 14px; color: #f2f6fb; flex-grow: 1;">Quadro — Canal 1</span>
+            <span style="font-size: 11.5px; color: #5c6879; white-space: nowrap;">sugerido a partir do DP</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+          <div style="padding: 11px 18px; border-radius: 9px; font-size: 13.5px; font-weight: 500; cursor: pointer; color: #cbd5e2; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);">Cancelar</div>
+          <div style="padding: 11px 20px; border-radius: 9px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: #05070a; background: #6f9bff;">Adicionar ao grupo</div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8b98a9" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6Z"></path><path d="M12 11v5.2"></path><path d="M12 8.1h.01"></path></svg>
+        <span style="font-size: 12.5px; line-height: 1.5; color: #8b98a9; text-wrap: pretty;">Este grupo é do local <span style="color: #cbd5e2;">Casa Principal</span>, então só lista dispositivos de lá — o servidor recusa uma série de fora. E só aparecem canais em <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; color: #cbd5e2;">W</span>, a unidade do grupo: misturar unidades exigiria dois eixos, então crie outro grupo para kWh ou volts.</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":900,"height":764}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

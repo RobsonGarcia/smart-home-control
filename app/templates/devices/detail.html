@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}{{ device_status.device.name }} - Painel Tuya{% endblock %}
+
+{% set e = m.estado(device_status) %}
+
+{% block breadcrumb %}
+{% if device_status.local %}
+<a href="/locais">Locais</a>
+<span class="sep">{{ m.icone_svg('seta', 13) }}</span>
+<a href="/locais/{{ device_status.local.id }}">{{ device_status.local.nome }}</a>
+{% if device_status.comodo %}
+<span class="sep">{{ m.icone_svg('seta', 13) }}</span>
+<span>{{ device_status.comodo.nome }}</span>
+{% endif %}
+{% else %}
+<a href="/devices">Dispositivos</a>
+{% endif %}
+<span class="sep">{{ m.icone_svg('seta', 13) }}</span>
+<span class="current">{{ device_status.device.name }}</span>
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="/devices" class="btn">{{ m.icone_svg('voltar') }} Voltar</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div class="page-head-text">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            {{ m.badge(e) }}
+            <span class="mono muted">{{ device_status.device.id }}</span>
+        </div>
+        <h1>{{ device_status.device.name }}</h1>
+        <div class="local-meta">
+            <span>{{ device_status.device.product_name or device_status.device.category or 'Dispositivo Tuya' }}</span>
+            <span class="sep"></span>
+            <span class="mono">{{ device_status.device.ip or 'sem IP' }}</span>
+            <span class="sep"></span>
+            <span class="mono">v{{ device_status.device.protocol_version or '?' }}</span>
+        </div>
+    </div>
+    <div class="controls" style="margin: 0; align-items: center;">
+        <span class="muted" style="font-size: 12.5px;">Monitorar</span>
+        {{ m.toggle(device_status) }}
+    </div>
+</div>
+
+<div class="device-info">
+    <div class="info-card">
+        <h3>Informações</h3>
+        <p><strong>Modelo:</strong> {{ device_status.device.model or '—' }}</p>
+        <p><strong>Categoria:</strong> {{ device_status.device.category or '—' }}</p>
+        <p><strong>Origem:</strong> {{ device_status.device.source }}</p>
+        <p><strong>Local:</strong>
+            {% if device_status.local %}
+                <a href="/locais/{{ device_status.local.id }}">{{ device_status.local.nome }}</a>
+                {% if device_status.comodo %} · {{ device_status.comodo.nome }}{% else %} · <span class="dim">sem cômodo</span>{% endif %}
+            {% else %}<span class="dim">sem local</span>{% endif %}
+        </p>
+        <p><strong>Intervalo de coleta:</strong> {{ device_status.config.poll_interval_seconds }} s</p>
+    </div>
+
+    <div class="info-card">
+        <h3>Última leitura</h3>
+        {% if device_status.reading %}
+        <p><strong>Coletada:</strong> <span data-tempo="{{ device_status.reading.collected_at }}">—</span></p>
+        <p class="mono dim">{{ device_status.reading.collected_at }} UTC</p>
+        <details>
+            <summary>Ver DPs brutos</summary>
+            <pre>{{ device_status.reading.dps_json }}</pre>
+        </details>
+        {% else %}
+        <p class="dim">Nenhuma leitura registrada ainda.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="chart-container">
+    <div class="chart-head">
+        <h3>Histórico</h3>
+        <span class="muted" style="font-size: 12.5px;">últimas 100 leituras · clique na legenda para ocultar uma série</span>
+    </div>
+
+    <div id="dpsLegend" class="dps-legend"></div>
+    <div style="height: 320px;"><canvas id="deviceChart"></canvas></div>
+</div>
+
+{% if device_status.reading %}
+<div class="reading-detail-container">
+    <div class="chart-head">
+        <h3>O que veio na última coleta</h3>
+        <span class="reading-timestamp" data-tempo="{{ device_status.reading.collected_at }}">—</span>
+    </div>
+    <div class="dps-detail-grid" id="dpsDetailGrid"></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dadosSeries = {{ chart_data|safe }};
+
+const EXPLICACOES = {
+    "1": "Interruptor 1 — estado on/off",
+    "2": "Interruptor 2 — estado on/off",
+    "3": "Interruptor 3 — estado on/off",
+    "17": "Energia acumulada — total consumido em kWh",
+    "18": "Corrente instantânea — amperagem atual em mA",
+    "19": "Potência instantânea — watts consumidos neste momento",
+    "20": "Voltagem — voltagem da rede em V",
+    "add_ele": "Energia acumulada — total consumido em kWh",
+    "add_ele_1": "Energia acumulada canal 1 — consumo do canal 1 em kWh",
+    "add_ele_2": "Energia acumulada canal 2 — consumo do canal 2 em kWh",
+    "cur_current": "Corrente instantânea — amperagem atual em mA",
+    "cur_current_1": "Corrente canal 1 — amperagem do canal 1 em mA",
+    "cur_current_2": "Corrente canal 2 — amperagem do canal 2 em mA",
+    "cur_power": "Potência instantânea — watts consumidos agora",
+    "cur_power_1": "Potência canal 1 — watts do canal 1",
+    "cur_power_2": "Potência canal 2 — watts do canal 2",
+    "cur_voltage": "Voltagem — voltagem da rede em V",
+    "cur_voltage_1": "Voltagem canal 1 — voltagem do canal 1 em V",
+    "cur_voltage_2": "Voltagem canal 2 — voltagem do canal 2 em V"
+};
+
+// Cor por DP, a partir do código — não da posição no array. Ocultar uma série
+// não repinta as outras.
+const CORES = coresDeSeries(dadosSeries, (s) => s.code);
+const visiveis = {};
+dadosSeries.forEach((s) => { visiveis[s.code] = true; });
+
+let grafico = null;
+
+function montarLegenda() {
+    const legenda = document.getElementById('dpsLegend');
+    legenda.innerHTML = '';
+
+    dadosSeries.forEach((serie) => {
+        const ultimo = serie.data.length ? serie.data[serie.data.length - 1].value : null;
+        const item = document.createElement('span');
+        item.className = 'dps-legend-item';
+        item.innerHTML =
+            '<span class="legend-color" style="background-color: ' + CORES[serie.code] + '"></span>' +
+            '<span></span><span class="valor"></span>';
+        item.children[1].textContent = serie.label;
+        item.children[2].textContent = ultimo === null ? '—' : numero(ultimo, 1);
+        item.addEventListener('click', () => {
+            visiveis[serie.code] = !visiveis[serie.code];
+            item.classList.toggle('off', !visiveis[serie.code]);
+            desenhar();
+        });
+        legenda.appendChild(item);
+    });
+
+    if (CORES.__excedentes) {
+        const nota = document.createElement('span');
+        nota.className = 'dps-legend-item off';
+        nota.textContent = CORES.__excedentes + ' série(s) além das 8 cores — em cinza';
+        legenda.appendChild(nota);
+    }
+}
+
+function desenhar() {
+    const canvas = document.getElementById('deviceChart');
+    if (!canvas || !dadosSeries.length) return;
+
+    const datasets = dadosSeries
+        .filter((s) => visiveis[s.code])
+        .map((s) => datasetDeSerie(
+            s.label,
+            s.data.map((p) => ({ x: p.timestamp, y: p.value })),
+            CORES[s.code]
+        ));
+
+    if (grafico) grafico.destroy();
+    grafico = new Chart(canvas.getContext('2d'), configGraficoLinha(datasets));
+}
+
+function montarDetalhes() {
+    const grade = document.getElementById('dpsDetailGrid');
+    if (!grade) return;
+
+    dadosSeries.forEach((serie) => {
+        const ultimo = serie.data.length ? serie.data[serie.data.length - 1].value : null;
+        const card = document.createElement('div');
+        card.className = 'dps-detail-card';
+
+        const cab = document.createElement('div');
+        cab.className = 'dps-detail-header';
+        const cor = document.createElement('span');
+        cor.className = 'dps-color';
+        cor.style.backgroundColor = CORES[serie.code];
+        const titulo = document.createElement('h4');
+        titulo.textContent = serie.label;
+        cab.appendChild(cor);
+        cab.appendChild(titulo);
+
+        const codigo = document.createElement('p');
+        codigo.className = 'dps-code';
+        codigo.textContent = serie.code;
+
+        const valor = document.createElement('p');
+        valor.className = 'dps-value';
+        const destaque = document.createElement('span');
+        destaque.className = 'value-highlight';
+        destaque.textContent = ultimo === null ? '—' : numero(ultimo, 1);
+        valor.appendChild(destaque);
+
+        card.appendChild(cab);
+        card.appendChild(codigo);
+        card.appendChild(valor);
+
+        if (EXPLICACOES[serie.code]) {
+            const exp = document.createElement('p');
+            exp.className = 'dps-explanation';
+            exp.textContent = EXPLICACOES[serie.code];
+            card.appendChild(exp);
+        }
+        grade.appendChild(card);
+    });
+}
+
+async function alternarMonitor(el, deviceId) {
+    const ligado = el.classList.contains('on');
+    el.classList.toggle('on');
+    try {
+        await apiPost('/devices/' + deviceId + '/toggle');
+        toastOk(ligado ? 'Monitoramento desligado' : 'Monitoramento ligado');
+    } catch (erro) {
+        el.classList.toggle('on');
+        toastErro(erro.message);
+    }
+}
+
+montarLegenda();
+montarDetalhes();
+desenhar();
+</script>
+{% endblock %}

@@ -1,0 +1,364 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    a { color: oklch(0.78 0.12 258); text-decoration: none; }
+    a:hover { color: oklch(0.88 0.08 258); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1180px; display: flex; background: #0b0e13; color: #e6ecf4;">
+
+  <aside style="width: 232px; flex-shrink: 0; background: #080b0f; border-right: 1px solid rgba(255,255,255,0.06); padding: 26px 18px; display: flex; flex-direction: column; gap: 34px;">
+    <div style="display: flex; align-items: center; gap: 11px; padding-left: 6px;">
+      <span style="width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #05070a; background: {{accent}};">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path><path d="M9.5 21v-6h5v6"></path></svg>
+      </span>
+      <span style="font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: #f2f6fb;">Painel Tuya</span>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #5c6879; padding: 0 12px 8px;">Monitoramento</div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 9px; font-size: 14px; color: #8b98a9;">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path><path d="M9.5 21v-6h5v6"></path></svg>
+        Locais e cômodos
+      </div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 9px; font-size: 14px; color: #8b98a9;">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5h6v6h-6zM13.5 5h6v6h-6zM4.5 14h6v6h-6zM13.5 14h6v6h-6z"></path></svg>
+        Dispositivos
+        <span style="margin-left: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">24</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: #f2f6fb; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 3 5.5 13.6h5.4L10.2 21l7.7-10.6h-5.4L13.2 3Z"></path></svg>
+        Energia
+        <span style="margin-left: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #8b98a9;">3</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 9px; font-size: 14px; color: #8b98a9;">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"></path><path d="M4.6 12a7.4 7.4 0 0 1 .1-1.2l-2-1.5 2-3.4 2.3 1a7.4 7.4 0 0 1 2.1-1.2L9.5 3h4l.4 2.7c.8.3 1.5.7 2.1 1.2l2.3-1 2 3.4-2 1.5a7.4 7.4 0 0 1 0 2.4l2 1.5-2 3.4-2.3-1c-.6.5-1.3.9-2.1 1.2L13.5 21h-4l-.4-2.7a7.4 7.4 0 0 1-2.1-1.2l-2.3 1-2-3.4 2-1.5A7.4 7.4 0 0 1 4.6 12Z"></path></svg>
+        Ajustes
+      </div>
+    </nav>
+
+    <div style="margin-top: auto; border-radius: 11px; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.025); padding: 14px; display: flex; flex-direction: column; gap: 9px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: oklch(0.78 0.15 158); box-shadow: 0 0 0 3px oklch(0.78 0.15 158 / 0.18);"></span>
+        <span style="font-size: 12px; font-weight: 500; color: #cbd5e2;">9 séries coletando</span>
+      </div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; line-height: 1.6; color: #6b7889;">
+        1.284 leituras hoje<br>retenção 30 dias
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; background-color: #0b0e13; background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 24px 24px;">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 32px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(8,11,15,0.7);">
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #6b7889;">
+        <span>Casa Principal</span>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"></path></svg>
+        <span style="color: #e6ecf4; font-weight: 500;">Energia</span>
+      </div>
+      <button style="padding: 9px 15px; border-radius: 9px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; border: none; color: #05070a; background: {{accent}};">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"></path></svg>
+        Novo grupo comparativo
+      </button>
+    </div>
+
+    <div style="padding: 32px; display: flex; flex-direction: column; gap: 26px;">
+
+      <header style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.07); padding: 28px 30px; display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; background-color: #0f141b; background-image: radial-gradient(110% 130% at 8% 0%, {{glow}}, transparent 62%);">
+        <div style="display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 9px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6b7889;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: {{accent}};"></span>
+            Grupos comparativos
+          </div>
+          <h1 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 46px; font-weight: 600; line-height: 1.02; letter-spacing: -1.4px; color: #f4f8fd;">Energia</h1>
+          <p style="margin: 0; max-width: 520px; font-size: 13.5px; line-height: 1.55; color: #8b98a9; text-wrap: pretty;">Combine qualquer canal de qualquer dispositivo em um grupo e compare as curvas lado a lado.</p>
+        </div>
+        <div style="display: flex; gap: 28px; flex-shrink: 0;">
+          <div style="text-align: right;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7889; margin-bottom: 7px;">Agora</div>
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 38px; font-weight: 500; line-height: 1; letter-spacing: -1.4px; color: #f4f8fd;">6,42<span style="font-size: 17px; color: #6b7889; margin-left: 4px;">kW</span></div>
+          </div>
+          <div style="width: 1px; background: rgba(255,255,255,0.08);"></div>
+          <div style="text-align: right;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7889; margin-bottom: 7px;">Hoje</div>
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 38px; font-weight: 500; line-height: 1; letter-spacing: -1.4px; color: #f4f8fd;">41,8<span style="font-size: 17px; color: #6b7889; margin-left: 4px;">kWh</span></div>
+          </div>
+        </div>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 62px; flex-shrink: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7889;">Período</span>
+            <sc-for list="{{periodos}}" as="p" hint-placeholder-count="5">
+              <div onClick="{{p.pick}}" style="cursor: pointer; padding: 8px 15px; border-radius: 999px; font-size: 13px; font-weight: 500; background: {{p.bg}}; color: {{p.fg}}; border: {{p.border}};">{{p.label}}</div>
+            </sc-for>
+          </div>
+          <div style="font-size: 12.5px; color: #6b7889;">Aplica-se a todos os grupos abaixo</div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 62px; flex-shrink: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7889;">Local</span>
+            <sc-for list="{{filtrosLocal}}" as="f" hint-placeholder-count="4">
+              <div onClick="{{f.pick}}" style="cursor: pointer; padding: 8px 15px; border-radius: 999px; font-size: 13px; font-weight: 500; background: {{f.bg}}; color: {{f.fg}}; border: {{f.border}};">{{f.label}}</div>
+            </sc-for>
+          </div>
+          <div style="font-size: 12.5px; color: #6b7889;">{{notaEscopo}}</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;">
+        <sc-for list="{{grupos}}" as="g" hint-placeholder-count="3">
+          <div style="border-radius: 15px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 22px; display: flex; flex-direction: column; gap: 18px;">
+
+            <div style="display: flex; flex-direction: column; gap: 9px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; background: {{g.escopoBg}}; color: {{g.escopoFg}}; border: 1px solid {{g.escopoBorda}};">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{g.escopoIcone}}"></path></svg>
+                  {{g.escopoLabel}}
+                </span>
+                <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; padding: 3px 8px; border-radius: 6px; white-space: nowrap; color: #8b98a9; background: rgba(255,255,255,0.05);">{{g.qtd}}</span>
+              </div>
+              <h3 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.4px; color: #f2f6fb;">{{g.nome}}</h3>
+              <p style="margin: 0; font-size: 12.5px; line-height: 1.5; color: #8b98a9; text-wrap: pretty;">{{g.descricao}}</p>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <svg width="325" height="78" viewBox="0 0 325 78" fill="none" style="display: block; max-width: 100%;">
+                <line x1="0" y1="3.5" x2="325" y2="3.5" stroke="rgba(255,255,255,0.05)" stroke-width="1"></line>
+                <line x1="0" y1="37" x2="325" y2="37" stroke="rgba(255,255,255,0.05)" stroke-width="1"></line>
+                <line x1="0" y1="71" x2="325" y2="71" stroke="rgba(255,255,255,0.09)" stroke-width="1"></line>
+                <g transform="translate(0,3)">
+                  <sc-for list="{{g.series}}" as="s" hint-placeholder-count="4">
+                    <path d="{{s.mini}}" fill="none" stroke="{{s.cor}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="{{s.opacidade}}"></path>
+                  </sc-for>
+                </g>
+              </svg>
+              <div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10px; color: #5c6879;">
+                <span>{{g.inicio}}</span>
+                <span>agora</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 7px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px;">
+              <sc-for list="{{g.series}}" as="s" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; gap: 9px;">
+                  <span style="width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; background: {{s.cor}};"></span>
+                  <span style="font-size: 12.5px; color: #cbd5e2; min-width: 0; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{s.label}}</span>
+                  <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #e6ecf4; white-space: nowrap;">{{s.atual}}</span>
+                  <span style="font-size: 11px; color: #5c6879; white-space: nowrap;">{{s.unidade}}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: auto;">
+              <div style="flex-grow: 1; text-align: center; padding: 9px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; color: #05070a; background: {{accent}};">Abrir</div>
+              <div style="width: 38px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8b98a9; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"></path><path d="M9.5 7V5.2h5V7"></path><path d="M6.6 7l.8 11.4a1.6 1.6 0 0 0 1.6 1.4h6a1.6 1.6 0 0 0 1.6-1.4L17.4 7"></path></svg>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="border-radius: 15px; border: 1px dashed rgba(255,255,255,0.12); background: rgba(255,255,255,0.015); padding: 26px 28px; display: flex; align-items: center; justify-content: space-between; gap: 28px;">
+        <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+          <div style="font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: -0.3px; color: #cbd5e2;">Comece um novo comparativo</div>
+          <div style="font-size: 13px; line-height: 1.5; color: #6b7889; max-width: 640px; text-wrap: pretty;">Um grupo aceita canais de dispositivos diferentes — os três canais do medidor do quadro, ou a geladeira de casa contra a do sítio. Só compare canais na mesma unidade.</div>
+        </div>
+        <div style="flex-shrink: 0; padding: 10px 18px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; color: #05070a; background: {{accent}};">Criar grupo</div>
+      </div>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":1180},"accent":{"editor":"color","default":"#6f9bff","options":["#6f9bff","#5ee0b8","#c084fc","#f0a868"]}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { periodo: '24h', local: 'todos' };
+  }
+
+  locaisDef() {
+    return ['Casa Principal', 'Sítio', 'Escritório'];
+  }
+
+  periodosDef() {
+    return [
+      { id: '1h', label: 'Última hora', n: 25, inicio: '-60 min', horas: 1 },
+      { id: '6h', label: '6 h', n: 31, inicio: '-6 h', horas: 6 },
+      { id: '24h', label: '24 h', n: 49, inicio: '00:00', horas: 24 },
+      { id: '7d', label: '7 dias', n: 57, inicio: 'seg', horas: 168 },
+      { id: '30d', label: '30 dias', n: 61, inicio: '29/07', horas: 720 }
+    ];
+  }
+
+  // Gerador determinístico: mesma forma em qualquer período.
+  amostrar(spec, n) {
+    const pontos = [];
+    for (let i = 0; i < n; i++) {
+      const t = n === 1 ? 0 : i / (n - 1);
+      if (spec.fim !== undefined && t > spec.fim) { pontos.push(null); continue; }
+      let ligado = true;
+      if (spec.duty) {
+        ligado = spec.duty.some((j) => t >= j[0] && t <= j[1]);
+      }
+      if (!ligado) { pontos.push(0); continue; }
+      const onda = Math.sin(i * spec.freq * 0.37 + spec.fase) * spec.amp;
+      pontos.push(Math.max(0, spec.base + onda));
+    }
+    return pontos;
+  }
+
+  caminho(pontos, largura, altura, maximo) {
+    const n = pontos.length;
+    let d = '';
+    let aberto = false;
+    for (let i = 0; i < n; i++) {
+      const v = pontos[i];
+      if (v === null) { aberto = false; continue; }
+      const x = (i / (n - 1)) * largura;
+      const y = altura - (v / maximo) * altura;
+      d += (aberto ? ' L ' : ' M ') + x.toFixed(1) + ' ' + y.toFixed(1);
+      aberto = true;
+    }
+    return d.trim();
+  }
+
+  gruposDef() {
+    return [
+      {
+        nome: 'Cargas da Casa Principal',
+        escopo: 'Casa Principal',
+        descricao: 'Potência instantânea das quatro maiores cargas, todas em W.',
+        maximo: 1200,
+        series: [
+          { label: 'Geladeira', unidade: 'W', cor: '#3987e5', spec: { base: 132, amp: 9, freq: 11, fase: 0.4 } },
+          { label: 'Ar-condicionado', unidade: 'W', cor: '#d95926', spec: { base: 1100, amp: 55, freq: 7, fase: 1.1, duty: [[0.06, 0.26], [0.72, 1.0]] } },
+          { label: 'Bomba Piscina', unidade: 'W', cor: '#199e70', spec: { base: 772, amp: 12, freq: 9, fase: 0.2, duty: [[0.24, 0.40], [0.80, 0.94]], fim: 0.94 } },
+          { label: 'Rack Escritório', unidade: 'W', cor: '#c98500', spec: { base: 312, amp: 8, freq: 13, fase: 2.0 } }
+        ]
+      },
+      {
+        nome: 'Medidor Quadro — 3 canais',
+        escopo: 'Casa Principal',
+        descricao: 'cur_power_1, cur_power_2 e cur_power_3 do medidor de entrada.',
+        maximo: 2600,
+        series: [
+          { label: 'Canal 1', unidade: 'W', cor: '#3987e5', spec: { base: 1840, amp: 220, freq: 5, fase: 0.3 } },
+          { label: 'Canal 2', unidade: 'W', cor: '#d95926', spec: { base: 1260, amp: 310, freq: 8, fase: 1.7 } },
+          { label: 'Canal 3', unidade: 'W', cor: '#199e70', spec: { base: 640, amp: 180, freq: 11, fase: 2.6 } }
+        ]
+      },
+      {
+        nome: 'Sítio vs Escritório',
+        escopo: null,
+        descricao: 'Energia acumulada dos dois medidores de entrada, em kWh.',
+        maximo: 120,
+        series: [
+          { label: 'Sítio — entrada', unidade: 'kWh', cor: '#3987e5', spec: { base: 74, amp: 26, freq: 3, fase: 0.9 } },
+          { label: 'Escritório — rack', unidade: 'kWh', cor: '#d95926', spec: { base: 38, amp: 14, freq: 4, fase: 2.2 } }
+        ]
+      }
+    ];
+  }
+
+  renderVals() {
+    const accent = this.props.accent ?? '#6f9bff';
+    const defs = this.periodosDef();
+    const atual = defs.find((p) => p.id === this.state.periodo) || defs[2];
+
+    const formatar = (v, unidade) => {
+      if (v === null) return '—';
+      if (unidade === 'kWh') return v.toFixed(1).replace('.', ',');
+      return Math.round(v).toString();
+    };
+
+    const localSel = this.state.local;
+    const locais = this.locaisDef();
+    // Um grupo geral vale em qualquer local, entao acompanha o filtro.
+    const grupos = this.gruposDef().filter(
+      (g) => localSel === 'todos' || g.escopo === null || g.escopo === localSel
+    );
+    const gerais = grupos.filter((g) => g.escopo === null).length;
+
+    const chipLocal = (id, label) => {
+      const ativo = localSel === id;
+      return {
+        label: label,
+        bg: ativo ? '#f2f6fb' : 'rgba(255,255,255,0.03)',
+        fg: ativo ? '#0b0e13' : '#cbd5e2',
+        border: ativo ? '1px solid #f2f6fb' : '1px solid rgba(255,255,255,0.09)',
+        pick: () => this.setState({ local: id })
+      };
+    };
+
+    return {
+      accent: accent,
+      glow: 'color-mix(in oklab, ' + accent + ' 16%, transparent)',
+      filtrosLocal: [chipLocal('todos', 'Todos')].concat(
+        locais.map((n) => chipLocal(n, n))
+      ),
+      notaEscopo: localSel === 'todos'
+        ? grupos.length + ' grupos · ' + gerais + ' gerais'
+        : gerais + ' grupos gerais aparecem em qualquer local',
+      periodos: defs.map((p) => {
+        const ativo = p.id === atual.id;
+        return {
+          label: p.label,
+          bg: ativo ? '#f2f6fb' : 'rgba(255,255,255,0.03)',
+          fg: ativo ? '#0b0e13' : '#cbd5e2',
+          border: ativo ? '1px solid #f2f6fb' : '1px solid rgba(255,255,255,0.09)',
+          pick: () => this.setState({ periodo: p.id })
+        };
+      }),
+      grupos: grupos.map((g) => ({
+        nome: g.nome,
+        descricao: g.descricao,
+        qtd: g.series.length + ' séries',
+        inicio: atual.inicio,
+        escopoLabel: g.escopo === null ? 'Geral' : g.escopo,
+        escopoIcone: g.escopo === null
+          ? 'M4.5 12h15M12 4.5v15'
+          : 'M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z',
+        escopoBg: g.escopo === null
+          ? 'rgba(255,255,255,0.05)'
+          : 'color-mix(in oklab, ' + accent + ' 14%, transparent)',
+        escopoFg: g.escopo === null ? '#8b98a9' : accent,
+        escopoBorda: g.escopo === null
+          ? 'rgba(255,255,255,0.10)'
+          : 'color-mix(in oklab, ' + accent + ' 32%, transparent)',
+        series: g.series.map((s) => {
+          const pontos = this.amostrar(s.spec, atual.n);
+          const vivos = pontos.filter((v) => v !== null);
+          const ultimo = vivos.length ? vivos[vivos.length - 1] : null;
+          const parou = pontos[pontos.length - 1] === null;
+          return {
+            label: s.label,
+            cor: s.cor,
+            unidade: parou ? 'sem dados' : s.unidade,
+            atual: parou ? '—' : formatar(ultimo, s.unidade),
+            opacidade: parou ? '0.55' : '1',
+            mini: this.caminho(pontos, 325, 68, g.maximo)
+          };
+        })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

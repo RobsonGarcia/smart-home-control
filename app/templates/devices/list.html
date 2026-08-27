@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}Dispositivos - Painel Tuya{% endblock %}
+
+{% block breadcrumb %}<span class="current">Dispositivos</span>{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn" onclick="importarDevicesJson()">{{ m.icone_svg('download') }} Importar devices.json</button>
+<button class="btn btn-primary" onclick="escanearRede()">{{ m.icone_svg('scan') }} Escanear rede</button>
+{% endblock %}
+
+{% block content %}
+{% set online = device_statuses|selectattr('is_online')|list|length %}
+{% set sem_coleta = device_statuses|rejectattr('config.enabled')|list|length %}
+{% set offline = device_statuses|length - online - sem_coleta %}
+
+<div class="page-head">
+    <div class="page-head-text">
+        <h1>Dispositivos</h1>
+        <p class="page-lead">Todo o inventário, em qualquer local. Para ver por cômodo,
+        abra <a href="/locais">Locais e cômodos</a>.</p>
+    </div>
+</div>
+
+<div id="scan-status" class="status-box" style="display: none;"></div>
+
+<div class="tiles">
+    <div class="tile">
+        <span class="rotulo">{{ m.dot('online') }} Online</span>
+        <span class="valor">{{ online }}</span>
+        <span class="nota">respondendo na LAN agora</span>
+    </div>
+    <div class="tile">
+        <span class="rotulo">{{ m.dot('offline') }} Offline</span>
+        <span class="valor">{{ offline }}</span>
+        <span class="nota">monitorados, sem resposta</span>
+    </div>
+    <div class="tile">
+        <span class="rotulo">{{ m.dot('sem-coleta') }} Não monitorados</span>
+        <span class="valor muted">{{ sem_coleta }}</span>
+        <span class="nota">no inventário, sem coleta</span>
+    </div>
+</div>
+
+<div class="filtros">
+    <span class="rotulo">Mostrar</span>
+    <span class="chip active" data-filtro-estado="todos" onclick="filtrar(this, 'estado')">Todos <span class="count">{{ device_statuses|length }}</span></span>
+    <span class="chip" data-filtro-estado="online" onclick="filtrar(this, 'estado')">{{ m.dot('online', true) }} Online <span class="count">{{ online }}</span></span>
+    <span class="chip" data-filtro-estado="offline" onclick="filtrar(this, 'estado')">{{ m.dot('offline', true) }} Offline <span class="count">{{ offline }}</span></span>
+    <span class="chip" data-filtro-estado="sem-coleta" onclick="filtrar(this, 'estado')">{{ m.dot('sem-coleta', true) }} Não monitorados <span class="count">{{ sem_coleta }}</span></span>
+</div>
+
+<div class="filtros">
+    <span class="rotulo">Local</span>
+    <span class="chip active" data-filtro-local="todos" onclick="filtrar(this, 'local')">Todos</span>
+    {% for l in locais %}
+    <span class="chip" data-filtro-local="{{ l.id }}" onclick="filtrar(this, 'local')">{{ l.nome }} <span class="count">{{ l.total_devices }}</span></span>
+    {% endfor %}
+</div>
+
+<table class="devices-table" id="tabela">
+    <thead>
+        <tr>
+            <th>Dispositivo</th>
+            <th>Local / cômodo</th>
+            <th>IP / protocolo</th>
+            <th>Última leitura</th>
+            <th>Status</th>
+            <th>Intervalo</th>
+            <th>Monitorar</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for st in device_statuses %}
+        {% set e = m.estado(st) %}
+        <tr class="{{ e }}" data-estado="{{ e }}" data-local="{{ st.device.local_id or '' }}">
+            <td>
+                <div class="cel-device">
+                    <span class="device-icone">{{ m.icone(st.device.category, 17) }}</span>
+                    <div>
+                        <a href="/devices/{{ st.device.id }}" class="device-nome-cel">{{ st.device.name }}</a>
+                        <div class="id">{{ st.device.id }}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                {% if st.local %}
+                    <div><a href="/locais/{{ st.local.id }}">{{ st.local.nome }}</a></div>
+                    <div class="dim" style="font-size: 11.5px;">{{ st.comodo.nome if st.comodo else 'sem cômodo' }}</div>
+                {% else %}
+                    <span class="dim">sem local</span>
+                {% endif %}
+            </td>
+            <td>
+                <div class="mono">{{ st.device.ip or 'sem IP' }}</div>
+                <div class="mono dim" style="font-size: 10.5px;">v{{ st.device.protocol_version or '?' }} · {{ st.device.source }}</div>
+            </td>
+            <td>
+                {% if st.reading %}
+                <span class="mono" data-tempo="{{ st.reading.collected_at }}">—</span>
+                {% else %}
+                <span class="dim">nunca coletado</span>
+                {% endif %}
+            </td>
+            <td>
+                <span style="display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;">
+                    {{ m.dot(e) }} {{ m.rotulo_estado(e) }}
+                </span>
+            </td>
+            <td>
+                <input type="number" class="poll-interval-input"
+                       value="{{ st.config.poll_interval_seconds }}" min="10" step="10"
+                       onchange="atualizarIntervalo('{{ st.device.id }}', this.value)">
+            </td>
+            <td>{{ m.toggle(st) }}</td>
+            <td style="text-align: right;">
+                <a href="/devices/{{ st.device.id }}" class="btn btn-small">Ver</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if not device_statuses %}
+<div class="empty-state">
+    <strong>Nenhum dispositivo no inventário</strong>
+    Importe o <span class="mono">devices.json</span> ou escaneie a rede para descobrir os aparelhos.
+</div>
+{% endif %}
+
+<p id="vazio-filtro" class="empty-state" style="display: none; margin-top: 16px;">
+    <strong>Nenhum dispositivo com esse filtro</strong>
+    Troque o filtro acima ou escaneie a rede para descobrir novos aparelhos.
+</p>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const filtros = { estado: 'todos', local: 'todos' };
+
+function filtrar(el, tipo) {
+    document.querySelectorAll('[data-filtro-' + tipo + ']').forEach((c) => c.classList.remove('active'));
+    el.classList.add('active');
+    filtros[tipo] = el.getAttribute('data-filtro-' + tipo);
+
+    let visiveis = 0;
+    document.querySelectorAll('#tabela tbody tr').forEach((tr) => {
+        const okEstado = filtros.estado === 'todos' || tr.dataset.estado === filtros.estado;
+        const okLocal = filtros.local === 'todos' || tr.dataset.local === filtros.local;
+        const mostrar = okEstado && okLocal;
+        tr.style.display = mostrar ? '' : 'none';
+        if (mostrar) visiveis++;
+    });
+
+    document.getElementById('tabela').style.display = visiveis ? '' : 'none';
+    document.getElementById('vazio-filtro').style.display = visiveis ? 'none' : '';
+}
+
+function mostrarStatus(msg) {
+    const box = document.getElementById('scan-status');
+    box.textContent = msg;
+    box.style.display = 'block';
+}
+
+async function importarDevicesJson() {
+    mostrarStatus('Importando devices.json…');
+    await executar(() => apiPost('/devices/import/devices-json'), null, (d) => {
+        mostrarStatus('Importados ' + d.imported + ' dispositivos');
+        recarregar(1200);
+    });
+}
+
+async function escanearRede() {
+    mostrarStatus('Escaneando a rede… isso pode levar alguns minutos.');
+    await executar(() => apiPost('/devices/scan/now'), null, (d) => {
+        mostrarStatus('Scan concluído: ' + d.found + ' encontrados, ' + d.errors + ' erros');
+        recarregar(1500);
+    });
+}
+
+async function alternarMonitor(el, deviceId) {
+    const ligado = el.classList.contains('on');
+    el.classList.toggle('on');
+    try {
+        await apiPost('/devices/' + deviceId + '/toggle');
+        toastOk(ligado ? 'Monitoramento desligado' : 'Monitoramento ligado');
+        recarregar(900);
+    } catch (erro) {
+        el.classList.toggle('on');
+        toastErro(erro.message);
+    }
+}
+
+async function atualizarIntervalo(deviceId, valor) {
+    await executar(
+        () => apiPost('/devices/' + deviceId + '/poll_interval',
+                      { poll_interval_seconds: parseInt(valor, 10) }),
+        null,
+        (d) => toastOk('Intervalo: ' + d.poll_interval_seconds + ' s')
+    );
+}
+</script>
+{% endblock %}

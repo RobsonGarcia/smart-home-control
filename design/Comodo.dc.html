@@ -1,0 +1,271 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    a { color: oklch(0.78 0.12 258); text-decoration: none; }
+    a:hover { color: oklch(0.88 0.08 258); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1060px; display: flex; background: #0b0e13; color: #e6ecf4;">
+
+  <aside style="width: 232px; flex-shrink: 0; background: #080b0f; border-right: 1px solid rgba(255,255,255,0.06); padding: 26px 18px; display: flex; flex-direction: column; gap: 34px;">
+    <div style="display: flex; align-items: center; gap: 11px; padding-left: 6px;">
+      <span style="width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #05070a; background: {{accent}};">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path><path d="M9.5 21v-6h5v6"></path></svg>
+      </span>
+      <span style="font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: #f2f6fb;">Painel Tuya</span>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #5c6879; padding: 0 12px 8px;">Casa Principal</div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 9px; font-size: 13.5px; color: #8b98a9;">Sala de Estar<span style="margin-left: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">3</span></div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 9px; font-size: 13.5px; font-weight: 500; color: #f2f6fb; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);">Cozinha<span style="margin-left: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #8b98a9;">3</span></div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 9px; font-size: 13.5px; color: #8b98a9;">Quarto Casal<span style="margin-left: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">2</span></div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 9px; font-size: 13.5px; color: #8b98a9;">Área Externa<span style="margin-left: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">2</span></div>
+      <div style="display: flex; align-items: center; gap: 9px; padding: 10px 12px; margin-top: 6px; border-radius: 9px; font-size: 13px; color: {{accent}};">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"></path></svg>
+        Novo cômodo
+      </div>
+    </nav>
+
+    <div style="margin-top: auto; border-radius: 11px; border: 1px dashed rgba(255,255,255,0.12); background: rgba(255,255,255,0.02); padding: 14px; display: flex; flex-direction: column; gap: 7px;">
+      <div style="font-size: 12px; font-weight: 500; color: #cbd5e2;">Sem cômodo</div>
+      <div style="font-size: 11.5px; line-height: 1.5; color: #6b7889;">4 dispositivos deste local ainda não foram atribuídos a um cômodo.</div>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; background-color: #0b0e13; background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 24px 24px;">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 32px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(8,11,15,0.7);">
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #6b7889;">
+        <span>Locais</span>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"></path></svg>
+        <span>Casa Principal</span>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"></path></svg>
+        <span style="color: #e6ecf4; font-weight: 500;">Cozinha</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button style="padding: 9px 15px; border-radius: 9px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; color: #cbd5e2; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15.6V20h4.4L19.2 9.2a1.7 1.7 0 0 0 0-2.4l-2-2a1.7 1.7 0 0 0-2.4 0Z"></path></svg>
+          Renomear cômodo
+        </button>
+        <button style="padding: 9px 15px; border-radius: 9px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; border: none; color: #05070a; background: {{accent}};">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"></path></svg>
+          Adicionar dispositivo
+        </button>
+      </div>
+    </div>
+
+    <div style="padding: 32px; display: flex; flex-direction: column; gap: 26px;">
+
+      <header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 32px;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <h1 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 40px; font-weight: 600; line-height: 1.05; letter-spacing: -1.2px; color: #f4f8fd;">Cozinha</h1>
+          <div style="display: flex; align-items: center; gap: 14px; font-size: 13.5px; color: #8b98a9;">
+            <span>3 dispositivos</span>
+            <span style="width: 3px; height: 3px; border-radius: 50%; background: #3d4756;"></span>
+            <span>2 monitorados</span>
+            <span style="width: 3px; height: 3px; border-radius: 50%; background: #3d4756;"></span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">coleta a cada 60 s</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 14px;">
+          <sc-for list="{{stats}}" as="stat" hint-placeholder-count="3">
+            <div style="min-width: 168px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7889;">{{stat.label}}</div>
+              <div style="display: flex; align-items: baseline; gap: 5px;">
+                <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 27px; font-weight: 500; letter-spacing: -1px; color: {{stat.fg}};">{{stat.valor}}</span>
+                <span style="font-size: 12.5px; color: #6b7889;">{{stat.unidade}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </header>
+
+      <section style="border-radius: 14px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; overflow: hidden;">
+        <div style="display: grid; grid-template-columns: 2.1fr 1.3fr 1.2fr 1.5fr 1.1fr 0.9fr 0.7fr; gap: 16px; padding: 13px 20px; border-bottom: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.02); font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7889;">
+          <span>Dispositivo</span>
+          <span>Categoria</span>
+          <span>IP / protocolo</span>
+          <span>Última leitura</span>
+          <span>Status</span>
+          <span>Intervalo</span>
+          <span style="text-align: right;">Monitorar</span>
+        </div>
+        <sc-for list="{{dispositivos}}" as="d" hint-placeholder-count="3">
+          <div style="display: grid; grid-template-columns: 2.1fr 1.3fr 1.2fr 1.5fr 1.1fr 0.9fr 0.7fr; gap: 16px; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); background: {{d.rowBg}};">
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+              <div style="width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: {{d.iconBg}}; border: 1px solid rgba(255,255,255,0.07); color: {{d.iconFg}};">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{d.icone}}"></path><path d="{{d.icone2}}"></path></svg>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+                <span style="font-size: 14px; font-weight: 600; letter-spacing: -0.2px; color: {{d.nomeFg}};">{{d.nome}}</span>
+                <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">{{d.id}}</span>
+              </div>
+            </div>
+            <span style="font-size: 12.5px; color: #8b98a9;">{{d.categoria}}</span>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: {{d.ipFg}};">{{d.ip}}</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">{{d.protocolo}}</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 12.5px; color: {{d.leituraFg}};">{{d.leitura}}</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">{{d.leituraHora}}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: {{d.dot}}; box-shadow: 0 0 0 3.5px {{d.halo}};"></span>
+              <span style="font-size: 12px; font-weight: 500; color: {{d.badgeFg}};">{{d.badge}}</span>
+            </div>
+            <div style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 7px; width: fit-content; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: {{d.intervaloFg}};">{{d.intervalo}}</span>
+              <span style="font-size: 11px; color: #5c6879;">s</span>
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+              <span style="width: 36px; height: 21px; border-radius: 999px; flex-shrink: 0; display: flex; align-items: center; padding: 2px; cursor: pointer; background: {{d.trilhoBg}}; border: 1px solid {{d.trilhoBorda}}; justify-content: {{d.trilhoPos}};">
+                <span style="width: 16px; height: 16px; border-radius: 50%; background: {{d.knobBg}};"></span>
+              </span>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <h3 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 19px; font-weight: 600; letter-spacing: -0.4px; color: #eaf0f7; white-space: nowrap;">Sem cômodo</h3>
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11.5px; color: #6b7889; white-space: nowrap;">4 dispositivos neste local</span>
+          <span style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.07);"></span>
+          <span style="font-size: 12.5px; font-weight: 500; white-space: nowrap; color: {{accent}};">Atribuir em lote</span>
+        </div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; max-width: 720px; color: #8b98a9; text-wrap: pretty;">A caixa de entrada do local: aparelhos vindos do <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; color: #cbd5e2;">devices.json</span> ou de um scan da rede que ainda não foram para nenhum cômodo. A migração deposita aqui tudo que já existia. Atribua um cômodo — e ligue o monitoramento, se ainda estiver desligado.</p>
+
+        <div style="border-radius: 14px; border: 1px dashed rgba(255,255,255,0.12); background: rgba(255,255,255,0.015); overflow: hidden;">
+          <sc-for list="{{orfaos}}" as="o" hint-placeholder-count="4">
+            <div style="display: grid; grid-template-columns: 2.2fr 1.4fr 1.3fr 1.6fr 1.5fr; gap: 16px; align-items: center; padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                <div style="width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); color: #5c6879;">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{o.icone}}"></path><path d="{{o.icone2}}"></path></svg>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+                  <span style="font-size: 14px; font-weight: 600; letter-spacing: -0.2px; color: #8b98a9;">{{o.nome}}</span>
+                  <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #4e5a6b;">{{o.id}}</span>
+                </div>
+              </div>
+              <span style="font-size: 12.5px; color: #6b7889;">{{o.categoria}}</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #5c6879;">{{o.ip}}</span>
+              <span style="font-size: 12.5px; color: #6b7889;">{{o.motivo}}</span>
+              <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                <div style="display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 8px; font-size: 12.5px; color: #cbd5e2; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); cursor: pointer;">
+                  Atribuir cômodo
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9.5 6 6 6-6"></path></svg>
+                </div>
+                <div style="display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: #05070a; background: {{accent}};">Monitorar</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":1060},"accent":{"editor":"color","default":"#6f9bff","options":["#6f9bff","#5ee0b8","#c084fc","#f0a868"]}}'>
+class Component extends DCLogic {
+  paleta(status) {
+    if (status === 'online') {
+      return { badge: 'Online', dot: 'oklch(0.78 0.15 158)', halo: 'oklch(0.78 0.15 158 / 0.16)', badgeFg: 'oklch(0.86 0.11 158)' };
+    }
+    if (status === 'offline') {
+      return { badge: 'Offline', dot: 'oklch(0.68 0.18 25)', halo: 'oklch(0.68 0.18 25 / 0.16)', badgeFg: 'oklch(0.82 0.12 25)' };
+    }
+    return { badge: 'Não monitorado', dot: '#4e5a6b', halo: 'rgba(255,255,255,0.05)', badgeFg: '#8b98a9' };
+  }
+
+  renderVals() {
+    const accent = this.props.accent ?? '#6f9bff';
+
+    const ICONES = {
+      tomada: ['M9 3v4M15 3v4M6.5 7h11v3.5a5.5 5.5 0 0 1-11 0V7Z', 'M12 16.5V21'],
+      interruptor: ['M6.5 8h11a4 4 0 0 1 0 8h-11a4 4 0 0 1 0-8Z', 'M8.8 10.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8Z'],
+      camera: ['M3.5 7.5h10.2v9H3.5z', 'M13.7 11l6.8-3v8l-6.8-3z'],
+      medidor: ['M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6Z', 'M12 8.4V12l2.6 1.8'],
+      sensor: ['M13.6 14.4V5.2a1.6 1.6 0 1 0-3.2 0v9.2a3.4 3.4 0 1 0 3.2 0Z', 'M12 12.4v3.4']
+    };
+
+    const linhas = [
+      { nome: 'Tomada Geladeira', id: 'bf1a7c02e9d4', tipo: 'tomada', categoria: 'Tomada inteligente', ip: '192.168.0.31', protocolo: 'v3.4 · LAN', leitura: '134 W · 3,2 kWh', leituraHora: 'há 12 s', status: 'online', intervalo: '60' },
+      { nome: 'Medidor Quadro', id: 'bf93e5a17c60', tipo: 'medidor', categoria: 'Medidor de energia', ip: '192.168.0.20', protocolo: 'v3.4 · LAN', leitura: '4,71 kW · 221 V', leituraHora: 'há 8 s', status: 'online', intervalo: '30' },
+      { nome: 'Sensor Cozinha', id: 'bf40db8e1152', tipo: 'sensor', categoria: 'Sensor temp./umidade', ip: 'sem IP', protocolo: 'v3.3 · desconhecido', leitura: 'nunca coletado', leituraHora: '—', status: 'nao', intervalo: '60' }
+    ];
+
+    const orfaos = [
+      { nome: 'Luz Quarto', id: 'bf77c0e4aa18', tipo: 'interruptor', categoria: 'Interruptor 2 canais', ip: '192.168.0.64', motivo: 'Importado do devices.json' },
+      { nome: 'Câmera Portão', id: 'bfa2109d3ef7', tipo: 'camera', categoria: 'Câmera IP', ip: 'sem IP', motivo: 'Nunca respondeu na LAN' },
+      { nome: 'Tomada Varanda', id: 'bf58e2b70c94', tipo: 'tomada', categoria: 'Tomada inteligente', ip: '192.168.0.58', motivo: 'Desligado manualmente' },
+      { nome: 'Sensor Lavanderia', id: 'bf0d94f6b3a1', tipo: 'sensor', categoria: 'Sensor temp./umidade', ip: '192.168.0.72', motivo: 'Descoberto no scan de 12/08' }
+    ];
+
+    return {
+      accent: accent,
+      stats: [
+        { label: 'Consumo do cômodo', valor: '4,84', unidade: 'kW', fg: '#f4f8fd' },
+        { label: 'Hoje', valor: '18,6', unidade: 'kWh', fg: '#f4f8fd' },
+        { label: 'Sem coleta', valor: '1', unidade: 'de 3', fg: '#8b98a9' }
+      ],
+      dispositivos: linhas.map((d) => {
+        const p = this.paleta(d.status);
+        const inativo = d.status === 'nao';
+        return {
+          nome: d.nome,
+          id: d.id,
+          categoria: d.categoria,
+          ip: d.ip,
+          protocolo: d.protocolo,
+          leitura: d.leitura,
+          leituraHora: d.leituraHora,
+          intervalo: d.intervalo,
+          badge: p.badge,
+          badgeFg: p.badgeFg,
+          dot: p.dot,
+          halo: p.halo,
+          icone: ICONES[d.tipo][0],
+          icone2: ICONES[d.tipo][1],
+          rowBg: inativo ? 'rgba(255,255,255,0.015)' : 'transparent',
+          iconBg: inativo ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
+          iconFg: inativo ? '#5c6879' : '#cbd5e2',
+          nomeFg: inativo ? '#8b98a9' : '#f2f6fb',
+          ipFg: inativo ? '#5c6879' : '#cbd5e2',
+          leituraFg: inativo ? '#5c6879' : '#e6ecf4',
+          intervaloFg: inativo ? '#5c6879' : '#cbd5e2',
+          trilhoBg: inativo ? 'rgba(255,255,255,0.05)' : accent,
+          trilhoBorda: inativo ? 'rgba(255,255,255,0.10)' : 'transparent',
+          trilhoPos: inativo ? 'flex-start' : 'flex-end',
+          knobBg: inativo ? '#6b7889' : '#05070a'
+        };
+      }),
+      orfaos: orfaos.map((o) => ({
+        nome: o.nome,
+        id: o.id,
+        categoria: o.categoria,
+        ip: o.ip,
+        motivo: o.motivo,
+        icone: ICONES[o.tipo][0],
+        icone2: ICONES[o.tipo][1]
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}Energia - Painel Tuya{% endblock %}
+
+{% block breadcrumb %}<span class="current">Energia</span>{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="abrirModal('modalGrupo')">
+    {{ m.icone_svg('mais') }} Novo grupo comparativo
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div class="page-head-text">
+        <h1>Energia</h1>
+        <p class="page-lead">Combine qualquer canal de qualquer dispositivo em um grupo e compare
+        as curvas lado a lado. Um grupo pode valer para tudo, ou ficar preso a um local.</p>
+    </div>
+</div>
+
+<div class="filtros">
+    <span class="rotulo">Local</span>
+    <span class="chip active" data-filtro-local="todos" onclick="filtrarLocal(this)">Todos</span>
+    {% for l in locais %}
+    <span class="chip" data-filtro-local="{{ l.id }}" onclick="filtrarLocal(this)">{{ l.nome }}</span>
+    {% endfor %}
+    <span class="muted" style="font-size: 12.5px; margin-left: auto;">
+        Grupos gerais aparecem em qualquer local
+    </span>
+</div>
+
+<div class="groups-grid" id="grade">
+    {% for group in groups %}
+    <div class="group-card" data-escopo="{{ group.scope_local_id or 'geral' }}">
+        <div class="topo">
+            {{ m.selo_escopo(group) }}
+            <span class="group-stats">{{ group.series|length }} série{{ 's' if group.series|length != 1 }}</span>
+        </div>
+
+        <h3><a href="/energy/{{ group.id }}">{{ group.name }}</a></h3>
+        {% if group.description %}<p class="group-desc">{{ group.description }}</p>{% endif %}
+
+        {% if group.series %}
+        <div style="display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--line); padding-top: 14px;">
+            {% for s in group.series[:5] %}
+            <div style="display: flex; align-items: center; gap: 9px; min-width: 0;">
+                <span class="legend-color" data-serie="{{ s.id }}"></span>
+                <span style="font-size: 12.5px; color: var(--text-2); flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ s.label }}</span>
+                {% if s.out_of_scope %}<span class="badge fora-do-local">fora do local</span>{% endif %}
+                <span class="mono dim" style="font-size: 11px;">{{ s.dps_code }}</span>
+            </div>
+            {% endfor %}
+            {% if group.series|length > 5 %}
+            <span class="dim" style="font-size: 11.5px;">+ {{ group.series|length - 5 }} outras</span>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="dim" style="font-size: 12.5px;">Sem séries ainda — abra o grupo e adicione a primeira.</p>
+        {% endif %}
+
+        {% if group.fora_do_escopo %}
+        <div class="aviso" style="padding: 10px 12px; font-size: 12px;">
+            {{ m.icone_svg('info', 14) }}
+            <span>{{ group.fora_do_escopo }} série{{ 's' if group.fora_do_escopo != 1 }} de outro local, adicionada antes do escopo. Nada foi apagado.</span>
+        </div>
+        {% endif %}
+
+        <div class="group-actions">
+            <a href="/energy/{{ group.id }}" class="btn btn-primary">Abrir</a>
+            <button class="btn btn-danger btn-icon" title="Excluir grupo"
+                    onclick="excluirGrupo({{ group.id }}, {{ group.name|tojson }})">
+                {{ m.icone_svg('lixeira', 14) }}
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not groups %}
+<div class="empty-state">
+    <strong>Nenhum grupo comparativo</strong>
+    Um grupo aceita canais de dispositivos diferentes — os três canais do medidor do quadro,
+    ou a geladeira de casa contra a do sítio. Só compare canais na mesma unidade.
+</div>
+{% endif %}
+
+<p id="vazio-filtro" class="empty-state" style="display: none;">
+    <strong>Nenhum grupo neste local</strong>
+    Crie um grupo com escopo deste local, ou volte para "Todos".
+</p>
+
+<div id="modalGrupo" class="modal">
+    <div class="modal-content">
+        <div class="modal-head">
+            <div>
+                <h2>Novo grupo comparativo</h2>
+                <div class="sub">Um grupo junta canais de dispositivos para comparar as curvas lado a lado.</div>
+            </div>
+            <span class="close" onclick="fecharModal('modalGrupo')">&times;</span>
+        </div>
+        <form onsubmit="criarGrupo(event)">
+            <div class="modal-body">
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <div class="campo" style="flex: 1 1 240px;">
+                        <label for="grupoNome">Nome</label>
+                        <input type="text" id="grupoNome" required placeholder="ex: Cargas da cozinha">
+                    </div>
+                    <div class="campo" style="flex: 1 1 240px;">
+                        <label for="grupoDesc">Descrição <span class="hint">opcional</span></label>
+                        <input type="text" id="grupoDesc" placeholder="ex: geladeira e medidor do quadro">
+                    </div>
+                </div>
+
+                <div class="campo">
+                    <label>Escopo</label>
+                    <div class="radio-cards">
+                        <label class="radio-card selected" id="cardGeral">
+                            <span class="titulo">
+                                <input type="radio" name="escopo" value="geral" checked onchange="mudarEscopo()">
+                                Geral
+                            </span>
+                            <span class="desc">Aceita canais de qualquer dispositivo, de qualquer local.
+                            Bom para comparar um local com o outro.</span>
+                        </label>
+                        <label class="radio-card" id="cardLocal">
+                            <span class="titulo">
+                                <input type="radio" name="escopo" value="local" onchange="mudarEscopo()">
+                                De um local
+                            </span>
+                            <span class="desc">Só aceita dispositivos daquele local. O seletor de série
+                            já vem filtrado e o servidor recusa o resto.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="campo" id="campoLocal" style="display: none;">
+                    <label for="grupoLocal">Local do grupo</label>
+                    <select id="grupoLocal">
+                        {% for l in locais %}
+                        <option value="{{ l.id }}">{{ l.nome }} — {{ l.total_devices }} dispositivos</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="aviso" id="avisoEscopo">
+                    {{ m.icone_svg('info', 16) }}
+                    <span id="avisoTexto">Sem escopo, nada é recusado — o cuidado com a unidade continua
+                    sendo seu: misturar W e kWh no mesmo gráfico exigiria dois eixos.</span>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <span class="muted" style="font-size: 12.5px;">O escopo pode ser trocado depois; nenhuma série é apagada.</span>
+                <div class="acoes">
+                    <button type="button" class="btn" onclick="fecharModal('modalGrupo')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar grupo</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cores dos pontinhos das séries: por id da série, não pela ordem na lista.
+document.querySelectorAll('.group-card').forEach((card) => {
+    const marcas = Array.from(card.querySelectorAll('[data-serie]'));
+    const mapa = coresDeSeries(marcas.map((el) => ({ id: el.dataset.serie })));
+    marcas.forEach((el) => { el.style.backgroundColor = mapa[el.dataset.serie]; });
+});
+
+function filtrarLocal(el) {
+    document.querySelectorAll('[data-filtro-local]').forEach((c) => c.classList.remove('active'));
+    el.classList.add('active');
+    const alvo = el.getAttribute('data-filtro-local');
+
+    let visiveis = 0;
+    document.querySelectorAll('.group-card').forEach((card) => {
+        // Grupo geral vale em qualquer local, então acompanha o filtro.
+        const mostrar = alvo === 'todos'
+            || card.dataset.escopo === 'geral'
+            || card.dataset.escopo === alvo;
+        card.style.display = mostrar ? '' : 'none';
+        if (mostrar) visiveis++;
+    });
+    document.getElementById('vazio-filtro').style.display = visiveis ? 'none' : '';
+}
+
+function mudarEscopo() {
+    const porLocal = document.querySelector('input[name="escopo"]:checked').value === 'local';
+    document.getElementById('campoLocal').style.display = porLocal ? '' : 'none';
+    document.getElementById('cardLocal').classList.toggle('selected', porLocal);
+    document.getElementById('cardGeral').classList.toggle('selected', !porLocal);
+    document.getElementById('avisoEscopo').classList.toggle('accent', porLocal);
+    document.getElementById('avisoTexto').textContent = porLocal
+        ? 'Este grupo fica preso ao local escolhido: aparece quando você filtra por ele, e o botão de adicionar série só oferece dispositivos de lá.'
+        : 'Sem escopo, nada é recusado — o cuidado com a unidade continua sendo seu: misturar W e kWh no mesmo gráfico exigiria dois eixos.';
+}
+
+async function criarGrupo(ev) {
+    ev.preventDefault();
+    const porLocal = document.querySelector('input[name="escopo"]:checked').value === 'local';
+    await executar(
+        () => apiPost('/energy', {
+            name: document.getElementById('grupoNome').value,
+            description: document.getElementById('grupoDesc').value || null,
+            scope_local_id: porLocal
+                ? parseInt(document.getElementById('grupoLocal').value, 10)
+                : null
+        }),
+        'Grupo criado',
+        () => { fecharModal('modalGrupo'); recarregar(); }
+    );
+}
+
+async function excluirGrupo(id, nome) {
+    if (!confirm('Excluir o grupo "' + nome + '" e todas as suas séries?')) return;
+    await executar(() => apiDelete('/energy/' + id), 'Grupo excluído', () => recarregar());
+}
+</script>
+{% endblock %}

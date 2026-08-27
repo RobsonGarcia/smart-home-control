@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}{{ local.nome }} - Painel Tuya{% endblock %}
+
+{% block breadcrumb %}
+<a href="/locais">Locais</a>
+<span class="sep">{{ m.icone_svg('seta', 13) }}</span>
+<span class="current">{{ local.nome }}</span>
+{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn" onclick="novoComodo()">{{ m.icone_svg('mais') }} Novo cômodo</button>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div class="page-head-text">
+        <h1>{{ local.nome }}</h1>
+        <div class="local-meta">
+            {% if local.rede_cidr %}<span class="mono">{{ local.rede_cidr }}</span><span class="sep"></span>{% endif %}
+            <span>{{ m.plural(grupo.comodos|length if grupo else 0, 'cômodo', 'cômodos') }}</span>
+            <span class="sep"></span>
+            <span>{{ m.plural(grupo.total_devices if grupo else 0, 'dispositivo', 'dispositivos') }}</span>
+        </div>
+        {% if local.descricao %}<p class="page-lead">{{ local.descricao }}</p>{% endif %}
+    </div>
+</div>
+
+{% if grupo %}
+<div class="tiles">
+    <div class="tile">
+        <span class="rotulo">{{ m.dot('online') }} Online</span>
+        <span class="valor">{{ grupo.online }}</span>
+        <span class="nota">respondendo na LAN agora</span>
+    </div>
+    <div class="tile">
+        <span class="rotulo">{{ m.dot('offline') }} Offline</span>
+        <span class="valor">{{ grupo.offline }}</span>
+        <span class="nota">monitorados, sem resposta</span>
+    </div>
+    <div class="tile">
+        <span class="rotulo">{{ m.dot('sem-coleta') }} Não monitorados</span>
+        <span class="valor muted">{{ grupo.nao_monitorados }}</span>
+        <span class="nota">no inventário, sem coleta</span>
+    </div>
+</div>
+
+{% for bloco in grupo.comodos %}
+<section id="comodo-{{ bloco.comodo.id }}">
+    <div class="section-rule">
+        <h3>{{ bloco.comodo.nome }}</h3>
+        <span class="meta">{{ bloco.devices|selectattr('is_online')|list|length }}/{{ bloco.devices|length }} online</span>
+        <span class="rule"></span>
+        <span class="action" onclick="renomearComodo({{ bloco.comodo.id }}, {{ bloco.comodo.nome|tojson }})">Renomear</span>
+        <span class="action" onclick="excluirComodo({{ bloco.comodo.id }}, {{ bloco.comodo.nome|tojson }}, {{ bloco.devices|length }})"
+              style="color: var(--text-4);">Excluir</span>
+    </div>
+
+    {% if bloco.devices %}
+    <div class="device-grid">
+        {% for st in bloco.devices %}
+            {{ m.device_card(st) }}
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="dim" style="font-size: 12.5px;">Nenhum dispositivo neste cômodo ainda.</p>
+    {% endif %}
+</section>
+{% endfor %}
+
+{% if grupo.sem_comodo %}
+<section id="sem-comodo">
+    <div class="section-rule">
+        <h3>Sem cômodo</h3>
+        <span class="meta">{{ m.plural(grupo.sem_comodo|length, 'dispositivo', 'dispositivos') }}</span>
+        <span class="rule"></span>
+    </div>
+
+    <div class="aviso" style="margin-bottom: 14px;">
+        {{ m.icone_svg('info', 16) }}
+        <span>A caixa de entrada deste local: aparelhos vindos do <span class="mono">devices.json</span>
+        ou de um scan da rede que ainda não foram para nenhum cômodo. Atribua um cômodo — e ligue o
+        monitoramento, se ainda estiver desligado.</span>
+    </div>
+
+    <table class="devices-table">
+        <thead>
+            <tr>
+                <th>Dispositivo</th>
+                <th>Categoria</th>
+                <th>IP / protocolo</th>
+                <th>Status</th>
+                <th>Monitorar</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for st in grupo.sem_comodo %}
+            {% set e = m.estado(st) %}
+            <tr class="{{ e }}">
+                <td>
+                    <div class="cel-device">
+                        <span class="device-icone">{{ m.icone(st.device.category, 17) }}</span>
+                        <div>
+                            <a href="/devices/{{ st.device.id }}" class="device-nome-cel">{{ st.device.name }}</a>
+                            <div class="id">{{ st.device.id }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="muted">{{ st.device.product_name or st.device.category or '—' }}</td>
+                <td>
+                    <div class="mono">{{ st.device.ip or 'sem IP' }}</div>
+                    <div class="mono dim" style="font-size: 10.5px;">v{{ st.device.protocol_version or '?' }}</div>
+                </td>
+                <td>
+                    <span style="display: inline-flex; align-items: center; gap: 8px;">
+                        {{ m.dot(e) }} {{ m.rotulo_estado(e) }}
+                    </span>
+                </td>
+                <td>{{ m.toggle(st) }}</td>
+                <td style="text-align: right;">
+                    <button class="btn btn-small btn-primary"
+                            onclick="abrirAtribuicao({{ st.device.id|tojson }}, {{ st.device.name|tojson }})">
+                        Atribuir cômodo
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+{% if not grupo.comodos and not grupo.sem_comodo %}
+<div class="empty-state">
+    <strong>Local vazio</strong>
+    Crie um cômodo e atribua dispositivos a ele.
+</div>
+{% endif %}
+{% endif %}
+
+<div id="modalAtribuir" class="modal">
+    <div class="modal-content" style="max-width: 620px;">
+        <div class="modal-head">
+            <div>
+                <h2>Atribuir dispositivo</h2>
+                <div class="sub" id="atribuirDevice">—</div>
+            </div>
+            <span class="close" onclick="fecharModal('modalAtribuir')">&times;</span>
+        </div>
+        <form onsubmit="salvarAtribuicao(event)">
+            <div class="modal-body">
+                <div class="campo">
+                    <label for="atribuirLocal">Local</label>
+                    <select id="atribuirLocal" onchange="carregarComodos()"></select>
+                </div>
+                <div class="campo">
+                    <label for="atribuirComodo">Cômodo</label>
+                    <select id="atribuirComodo"></select>
+                </div>
+                <div class="aviso">
+                    {{ m.icone_svg('info', 15) }}
+                    <span>A atribuição fica só sua: escanear a rede ou reimportar o
+                    <span class="mono">devices.json</span> atualiza IP, nome e categoria,
+                    mas não mexe no local nem no cômodo.</span>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <div class="acoes">
+                    <button type="button" class="btn" onclick="fecharModal('modalAtribuir')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar atribuição</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const LOCAL_ID = {{ local.id }};
+let arvoreLocais = [];
+let deviceEmEdicao = null;
+
+async function carregarArvore() {
+    const dados = await apiGet('/locais/api');
+    arvoreLocais = dados.locais;
+    const sel = document.getElementById('atribuirLocal');
+    sel.innerHTML = '';
+    arvoreLocais.forEach((l) => {
+        const opt = document.createElement('option');
+        opt.value = l.id;
+        opt.textContent = l.nome;
+        if (l.id === LOCAL_ID) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    carregarComodos();
+}
+
+function carregarComodos() {
+    const localId = parseInt(document.getElementById('atribuirLocal').value, 10);
+    const local = arvoreLocais.find((l) => l.id === localId);
+    const sel = document.getElementById('atribuirComodo');
+    sel.innerHTML = '';
+
+    const vazio = document.createElement('option');
+    vazio.value = '';
+    vazio.textContent = '— sem cômodo —';
+    sel.appendChild(vazio);
+
+    (local ? local.comodos : []).forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.nome + ' (' + c.total_devices + ')';
+        sel.appendChild(opt);
+    });
+}
+
+async function abrirAtribuicao(deviceId, deviceNome) {
+    deviceEmEdicao = deviceId;
+    document.getElementById('atribuirDevice').textContent = deviceNome + ' · ' + deviceId;
+    if (!arvoreLocais.length) await carregarArvore();
+    abrirModal('modalAtribuir');
+}
+
+async function salvarAtribuicao(ev) {
+    ev.preventDefault();
+    const comodo = document.getElementById('atribuirComodo').value;
+    await executar(
+        () => apiPost('/devices/' + deviceEmEdicao + '/placement', {
+            local_id: parseInt(document.getElementById('atribuirLocal').value, 10),
+            comodo_id: comodo ? parseInt(comodo, 10) : null
+        }),
+        'Dispositivo atribuído',
+        () => { fecharModal('modalAtribuir'); recarregar(); }
+    );
+}
+
+async function novoComodo() {
+    const nome = prompt('Novo cômodo em {{ local.nome }}:');
+    if (!nome) return;
+    await executar(() => apiPost('/locais/' + LOCAL_ID + '/comodos', { nome: nome }),
+                   'Cômodo criado', () => recarregar());
+}
+
+async function renomearComodo(comodoId, atual) {
+    const nome = prompt('Novo nome do cômodo:', atual);
+    if (!nome || nome === atual) return;
+    await executar(() => apiPut('/locais/' + LOCAL_ID + '/comodos/' + comodoId, { nome: nome }),
+                   'Cômodo renomeado', () => recarregar());
+}
+
+async function excluirComodo(comodoId, nome, qtd) {
+    const aviso = qtd
+        ? 'Excluir "' + nome + '"? Os ' + qtd + ' dispositivos voltam para "sem cômodo" — nenhum é apagado.'
+        : 'Excluir o cômodo "' + nome + '"?';
+    if (!confirm(aviso)) return;
+    await executar(() => apiDelete('/locais/' + LOCAL_ID + '/comodos/' + comodoId),
+                   'Cômodo excluído', () => recarregar());
+}
+
+async function alternarMonitor(el, deviceId) {
+    const ligado = el.classList.contains('on');
+    el.classList.toggle('on');
+    try {
+        await apiPost('/devices/' + deviceId + '/toggle');
+        toastOk(ligado ? 'Monitoramento desligado' : 'Monitoramento ligado');
+        recarregar(900);
+    } catch (erro) {
+        el.classList.toggle('on');
+        toastErro(erro.message);
+    }
+}
+</script>
+{% endblock %}

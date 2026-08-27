@@ -1,0 +1,449 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    a { color: oklch(0.78 0.12 258); text-decoration: none; }
+    a:hover { color: oklch(0.88 0.08 258); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1260px; display: flex; background: #0b0e13; color: #e6ecf4;">
+
+  <aside style="width: 232px; flex-shrink: 0; background: #080b0f; border-right: 1px solid rgba(255,255,255,0.06); padding: 26px 18px; display: flex; flex-direction: column; gap: 34px;">
+    <div style="display: flex; align-items: center; gap: 11px; padding-left: 6px;">
+      <span style="width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #05070a; background: {{accent}};">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path><path d="M9.5 21v-6h5v6"></path></svg>
+      </span>
+      <span style="font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: #f2f6fb;">Painel Tuya</span>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #5c6879; padding: 0 12px 8px;">Grupos</div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 9px; font-size: 13.5px; font-weight: 500; color: #f2f6fb; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);">Cargas da Casa<span style="margin-left: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #8b98a9;">4</span></div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 9px; font-size: 13.5px; color: #8b98a9;">Medidor Quadro<span style="margin-left: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">3</span></div>
+      <div style="display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 9px; font-size: 13.5px; color: #8b98a9;">Sítio vs Escritório<span style="margin-left: auto; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">2</span></div>
+      <div style="display: flex; align-items: center; gap: 9px; padding: 10px 12px; margin-top: 6px; border-radius: 9px; font-size: 13px; color: {{accent}};">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"></path></svg>
+        Novo grupo
+      </div>
+    </nav>
+
+    <div style="margin-top: auto; border-radius: 11px; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.025); padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 12px; font-weight: 500; color: #cbd5e2;">Escopo e unidade</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; line-height: 1.6; color: #6b7889;">local: Casa Principal<br>W — potência instantânea<br>um eixo só, sem escala dupla</div>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; background-color: #0b0e13; background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 24px 24px;">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 32px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(8,11,15,0.7);">
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #6b7889;">
+        <span>Energia</span>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"></path></svg>
+        <span style="color: #e6ecf4; font-weight: 500;">Cargas da Casa Principal</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button style="padding: 9px 15px; border-radius: 9px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; color: oklch(0.82 0.12 25); background: oklch(0.68 0.18 25 / 0.10); border: 1px solid oklch(0.68 0.18 25 / 0.24);">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"></path><path d="M9.5 7V5.2h5V7"></path><path d="M6.6 7l.8 11.4a1.6 1.6 0 0 0 1.6 1.4h6a1.6 1.6 0 0 0 1.6-1.4L17.4 7"></path></svg>
+          Deletar grupo
+        </button>
+        <button style="padding: 9px 15px; border-radius: 9px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; border: none; color: #05070a; background: {{accent}};">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"></path></svg>
+          Adicionar série
+        </button>
+      </div>
+    </div>
+
+    <div style="padding: 32px; display: flex; flex-direction: column; gap: 24px;">
+
+      <header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 32px;">
+        <div style="display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; background: {{escopo.bg}}; color: {{escopo.fg}}; border: 1px solid {{escopo.borda}};">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path></svg>
+              {{escopo.label}}
+            </span>
+            <span style="font-size: 12.5px; color: #6b7889;">{{escopo.nota}}</span>
+          </div>
+          <h1 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 40px; font-weight: 600; line-height: 1.05; letter-spacing: -1.2px; color: #f4f8fd;">Cargas da Casa Principal</h1>
+          <p style="margin: 0; max-width: 640px; font-size: 13.5px; line-height: 1.55; color: #8b98a9; text-wrap: pretty;">Potência instantânea das quatro maiores cargas. Todas as séries estão em watts, então dividem o mesmo eixo.</p>
+        </div>
+        <div style="display: flex; gap: 26px; flex-shrink: 0;">
+          <div style="text-align: right;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7889; margin-bottom: 7px;">Soma agora</div>
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 34px; font-weight: 500; line-height: 1; letter-spacing: -1.2px; color: #f4f8fd;">{{soma}}<span style="font-size: 16px; color: #6b7889; margin-left: 4px;">W</span></div>
+          </div>
+          <div style="width: 1px; background: rgba(255,255,255,0.08);"></div>
+          <div style="text-align: right;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7889; margin-bottom: 7px;">No período</div>
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 34px; font-weight: 500; line-height: 1; letter-spacing: -1.2px; color: #f4f8fd;">{{energia}}<span style="font-size: 16px; color: #6b7889; margin-left: 4px;">kWh</span></div>
+          </div>
+        </div>
+      </header>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7889; margin-right: 4px;">Período</span>
+          <sc-for list="{{periodos}}" as="p" hint-placeholder-count="5">
+            <div onClick="{{p.pick}}" style="cursor: pointer; padding: 8px 15px; border-radius: 999px; font-size: 13px; font-weight: 500; background: {{p.bg}}; color: {{p.fg}}; border: {{p.border}};">{{p.label}}</div>
+          </sc-for>
+        </div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #6b7889;">{{amostras}}</div>
+      </div>
+
+      <section style="border-radius: 15px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 24px;">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 18px;">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <sc-for list="{{legenda}}" as="l" hint-placeholder-count="4">
+              <div onClick="{{l.pick}}" style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px; background: {{l.bg}}; border: 1px solid {{l.borda}};">
+                <span style="width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; background: {{l.ponto}};"></span>
+                <span style="font-size: 13px; font-weight: 500; color: {{l.fg}};">{{l.label}}</span>
+                <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11.5px; color: {{l.valorFg}};">{{l.valor}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size: 12px; color: #5c6879; white-space: nowrap;">Clique para ocultar uma série</div>
+        </div>
+
+        <div style="position: relative;">
+          <svg width="1048" height="336" viewBox="0 0 1048 336" fill="none" style="display: block; max-width: 100%;">
+            <sc-for list="{{grade}}" as="g" hint-placeholder-count="5">
+              <line x1="54" y1="{{g.y}}" x2="950" y2="{{g.y}}" stroke="{{g.cor}}" stroke-width="1"></line>
+            </sc-for>
+            <sc-for list="{{grade}}" as="g" hint-placeholder-count="5">
+              <text x="44" y="{{g.ty}}" text-anchor="end" fill="#6b7889" font-size="11" font-family="IBM Plex Mono, ui-monospace, monospace">{{g.label}}</text>
+            </sc-for>
+            <sc-for list="{{ticks}}" as="t" hint-placeholder-count="5">
+              <text x="{{t.x}}" y="312" text-anchor="middle" fill="#6b7889" font-size="11" font-family="IBM Plex Mono, ui-monospace, monospace">{{t.label}}</text>
+            </sc-for>
+
+            <line x1="{{cruz.x}}" y1="18" x2="{{cruz.x}}" y2="288" stroke="rgba(255,255,255,0.22)" stroke-width="1"></line>
+
+            <sc-for list="{{visiveis}}" as="s" hint-placeholder-count="4">
+              <path d="{{s.caminho}}" fill="none" stroke="{{s.cor}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </sc-for>
+
+            <sc-for list="{{marcadores}}" as="m" hint-placeholder-count="4">
+              <circle cx="{{m.x}}" cy="{{m.y}}" r="4.5" fill="{{m.cor}}" stroke="#0f141b" stroke-width="2"></circle>
+            </sc-for>
+
+            <sc-for list="{{fins}}" as="f" hint-placeholder-count="4">
+              <circle cx="{{f.x}}" cy="{{f.y}}" r="3.5" fill="{{f.cor}}" stroke="#0f141b" stroke-width="2"></circle>
+            </sc-for>
+
+            <sc-for list="{{rotulos}}" as="r" hint-placeholder-count="4">
+              <text x="{{r.x}}" y="{{r.y}}" fill="{{r.fg}}" font-size="11.5" font-weight="500" font-family="IBM Plex Sans, system-ui, sans-serif">{{r.texto}}</text>
+            </sc-for>
+          </svg>
+
+          <div style="position: absolute; top: 34px; left: {{cruz.caixaX}}; width: 196px; border-radius: 10px; background: #05070a; border: 1px solid rgba(255,255,255,0.14); padding: 12px 13px; display: flex; flex-direction: column; gap: 9px; box-shadow: 0 8px 24px rgba(0,0,0,0.45);">
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #8b98a9; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">{{cruz.carimbo}}</div>
+            <sc-for list="{{cruz.linhas}}" as="l" hint-placeholder-count="4">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; background: {{l.cor}};"></span>
+                <span style="font-size: 12px; color: #cbd5e2; flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{l.label}}</span>
+                <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #f2f6fb; white-space: nowrap;">{{l.valor}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <section style="border-radius: 15px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; overflow: hidden;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 22px 14px;">
+          <h3 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: #eaf0f7;">Séries do grupo</h3>
+          <span style="font-size: 12.5px; color: #6b7889;">Os mesmos números do gráfico, em tabela</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.7fr 1.5fr 1.1fr 0.9fr 0.9fr 0.9fr 1fr 0.6fr; gap: 14px; padding: 11px 22px; border-top: 1px solid rgba(255,255,255,0.07); border-bottom: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.02); font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7889;">
+          <span>Série</span>
+          <span>Dispositivo</span>
+          <span>DP</span>
+          <span style="text-align: right;">Atual</span>
+          <span style="text-align: right;">Média</span>
+          <span style="text-align: right;">Máx</span>
+          <span style="text-align: right;">Total</span>
+          <span></span>
+        </div>
+        <sc-for list="{{tabela}}" as="t" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 1.7fr 1.5fr 1.1fr 0.9fr 0.9fr 0.9fr 1fr 0.6fr; gap: 14px; align-items: center; padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.05); opacity: {{t.opacidade}};">
+            <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+              <span style="width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; background: {{t.cor}};"></span>
+              <span style="font-size: 13.5px; font-weight: 500; color: #f2f6fb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{t.label}}</span>
+              <sc-if value="{{t.fora}}" hint-placeholder-val="{{false}}">
+                <span style="flex-shrink: 0; padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; background: rgba(255,255,255,0.05); color: #8b98a9; border: 1px dashed rgba(255,255,255,0.18);">fora do local</span>
+              </sc-if>
+            </div>
+            <span style="font-size: 12.5px; color: #8b98a9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{t.dispositivo}}</span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11.5px; color: #6b7889;">{{t.dp}}</span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; color: {{t.atualFg}};">{{t.atual}}</span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; color: #cbd5e2;">{{t.media}}</span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; color: #cbd5e2;">{{t.maximo}}</span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; color: #cbd5e2;">{{t.total}}</span>
+            <div style="display: flex; justify-content: flex-end;">
+              <span style="width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7889; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"></path><path d="M9.5 7V5.2h5V7"></path><path d="M6.6 7l.8 11.4a1.6 1.6 0 0 0 1.6 1.4h6a1.6 1.6 0 0 0 1.6-1.4L17.4 7"></path></svg>
+              </span>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":1260},"accent":{"editor":"color","default":"#6f9bff","options":["#6f9bff","#5ee0b8","#c084fc","#f0a868"]}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { periodo: '24h', ocultas: {} };
+  }
+
+  // Geometria do gráfico (px, dentro do SVG 1048x336)
+  geo() {
+    return { x0: 54, x1: 950, y0: 18, y1: 288, maximo: 1200 };
+  }
+
+  periodosDef() {
+    return [
+      { id: '1h', label: 'Última hora', n: 25, horas: 1, ticks: ['19:12', '19:27', '19:42', '19:57', 'agora'] },
+      { id: '6h', label: '6 h', n: 31, horas: 6, ticks: ['14:12', '15:24', '16:36', '17:48', 'agora'] },
+      { id: '24h', label: '24 h', n: 49, horas: 24, ticks: ['00:00', '06:00', '12:00', '18:00', 'agora'] },
+      { id: '7d', label: '7 dias', n: 57, horas: 168, ticks: ['qui', 'sex', 'sáb', 'dom', 'seg', 'ter', 'agora'] },
+      { id: '30d', label: '30 dias', n: 61, horas: 720, ticks: ['29/07', '05/08', '12/08', '19/08', 'agora'] }
+    ];
+  }
+
+  seriesDef() {
+    return [
+      { label: 'Geladeira', local: 'Casa Principal', dispositivo: 'Tomada Geladeira', dp: 'cur_power', cor: '#3987e5', spec: { base: 132, amp: 9, freq: 11, fase: 0.4 } },
+      { label: 'Ar-condicionado', local: 'Casa Principal', dispositivo: 'Ar-condicionado', dp: 'cur_power', cor: '#d95926', spec: { base: 1100, amp: 55, freq: 7, fase: 1.1, duty: [[0.06, 0.26], [0.72, 1.0]] } },
+      { label: 'Bomba Piscina', local: 'Casa Principal', dispositivo: 'Bomba Piscina', dp: 'cur_power', cor: '#199e70', spec: { base: 772, amp: 12, freq: 9, fase: 0.2, duty: [[0.24, 0.40], [0.80, 0.94]], fim: 0.94 } },
+      { label: 'Rack Escritório', local: 'Escritório', dispositivo: 'Tomada Rack', dp: 'cur_power_1', cor: '#c98500', spec: { base: 312, amp: 8, freq: 13, fase: 2.0 } }
+    ];
+  }
+
+  amostrar(spec, n) {
+    const pontos = [];
+    for (let i = 0; i < n; i++) {
+      const t = n === 1 ? 0 : i / (n - 1);
+      if (spec.fim !== undefined && t > spec.fim) { pontos.push(null); continue; }
+      let ligado = true;
+      if (spec.duty) ligado = spec.duty.some((j) => t >= j[0] && t <= j[1]);
+      if (!ligado) { pontos.push(0); continue; }
+      pontos.push(Math.max(0, spec.base + Math.sin(i * spec.freq * 0.37 + spec.fase) * spec.amp));
+    }
+    return pontos;
+  }
+
+  px(i, n) {
+    const g = this.geo();
+    return g.x0 + (i / (n - 1)) * (g.x1 - g.x0);
+  }
+
+  py(v) {
+    const g = this.geo();
+    return g.y1 - (v / g.maximo) * (g.y1 - g.y0);
+  }
+
+  caminho(pontos) {
+    const n = pontos.length;
+    let d = '';
+    let aberto = false;
+    for (let i = 0; i < n; i++) {
+      const v = pontos[i];
+      if (v === null) { aberto = false; continue; }
+      d += (aberto ? ' L ' : ' M ') + this.px(i, n).toFixed(1) + ' ' + this.py(v).toFixed(1);
+      aberto = true;
+    }
+    return d.trim();
+  }
+
+  carimbo(id, t) {
+    const doisDig = (x) => (x < 10 ? '0' : '') + x;
+    if (id === '24h') {
+      const m = Math.round(t * 1440);
+      return doisDig(Math.floor(m / 60) % 24) + ':' + doisDig(m % 60);
+    }
+    if (id === '6h') {
+      const m = 852 + Math.round(t * 360);
+      return doisDig(Math.floor(m / 60) % 24) + ':' + doisDig(m % 60);
+    }
+    if (id === '1h') {
+      const m = 1152 + Math.round(t * 60);
+      return doisDig(Math.floor(m / 60) % 24) + ':' + doisDig(m % 60);
+    }
+    if (id === '7d') {
+      const dias = ['qui', 'sex', 'sáb', 'dom', 'seg', 'ter', 'qua'];
+      const h = t * 168;
+      return dias[Math.min(6, Math.floor(h / 24))] + ' ' + doisDig(Math.floor(h % 24)) + ':00';
+    }
+    const dia = 29 + Math.round(t * 30);
+    return dia <= 31 ? doisDig(dia) + '/07' : doisDig(dia - 31) + '/08';
+  }
+
+  renderVals() {
+    const accent = this.props.accent ?? '#6f9bff';
+    const escopoLocal = 'Casa Principal';   // null seria um grupo geral
+    const g = this.geo();
+    const defs = this.periodosDef();
+    const periodo = defs.find((p) => p.id === this.state.periodo) || defs[2];
+    const n = periodo.n;
+    const ocultas = this.state.ocultas;
+
+    const series = this.seriesDef().map((s) => {
+      const pontos = this.amostrar(s.spec, n);
+      const vivos = pontos.filter((v) => v !== null);
+      const parou = pontos[pontos.length - 1] === null;
+      const soma = vivos.reduce((a, b) => a + b, 0);
+      const media = vivos.length ? soma / vivos.length : 0;
+      const ultimoIdx = pontos.reduce((acc, v, i) => (v === null ? acc : i), 0);
+      return {
+        base: s,
+        pontos: pontos,
+        parou: parou,
+        oculta: !!ocultas[s.label],
+        ultimo: vivos.length ? vivos[vivos.length - 1] : 0,
+        ultimoIdx: ultimoIdx,
+        media: media,
+        maximo: vivos.length ? Math.max.apply(null, vivos) : 0,
+        total: (media * periodo.horas) / 1000
+      };
+    });
+
+    const num = (v) => Math.round(v).toString();
+    const dec = (v) => v.toFixed(1).replace('.', ',');
+
+    const visiveis = series.filter((s) => !s.oculta);
+
+    // Rótulos diretos no fim de cada linha, separados para não colidirem.
+    const rotulos = visiveis
+      .map((s) => ({
+        s: s,
+        y: this.py(s.parou ? s.pontos[s.ultimoIdx] : s.ultimo),
+        x: s.parou ? this.px(s.ultimoIdx, n) + 10 : 962,
+        texto: s.parou ? s.base.label + ' · sem dados' : s.base.label
+      }))
+      .sort((a, b) => a.y - b.y);
+    for (let i = 1; i < rotulos.length; i++) {
+      if (rotulos[i].y - rotulos[i - 1].y < 16) rotulos[i].y = rotulos[i - 1].y + 16;
+    }
+
+    const idxCruz = Math.round(0.85 * (n - 1));
+    const cruzX = this.px(idxCruz, n);
+
+    const grade = [0, 300, 600, 900, 1200].map((v) => ({
+      y: this.py(v).toFixed(1),
+      ty: (this.py(v) + 4).toFixed(1),
+      label: v === 1200 ? '1200 W' : String(v),
+      cor: v === 0 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'
+    }));
+
+    const somaAgora = visiveis.reduce((a, s) => a + (s.parou ? 0 : s.ultimo), 0);
+    const energiaTotal = visiveis.reduce((a, s) => a + s.total, 0);
+
+    const fora = series.filter((s) => escopoLocal !== null && s.base.local !== escopoLocal).length;
+
+    return {
+      accent: accent,
+      escopo: {
+        label: escopoLocal === null ? 'Geral' : escopoLocal,
+        nota: fora === 0
+          ? 'só aceita dispositivos deste local'
+          : fora + ' série de outro local, adicionada antes do escopo',
+        bg: 'color-mix(in oklab, ' + accent + ' 14%, transparent)',
+        fg: accent,
+        borda: 'color-mix(in oklab, ' + accent + ' 32%, transparent)'
+      },
+      soma: num(somaAgora),
+      energia: dec(energiaTotal),
+      amostras: n + ' amostras · 1 ponto a cada ' + Math.round((periodo.horas * 60) / (n - 1)) + ' min',
+      periodos: defs.map((p) => {
+        const ativo = p.id === periodo.id;
+        return {
+          label: p.label,
+          bg: ativo ? '#f2f6fb' : 'rgba(255,255,255,0.03)',
+          fg: ativo ? '#0b0e13' : '#cbd5e2',
+          border: ativo ? '1px solid #f2f6fb' : '1px solid rgba(255,255,255,0.09)',
+          pick: () => this.setState({ periodo: p.id })
+        };
+      }),
+      legenda: series.map((s) => ({
+        label: s.base.label,
+        valor: s.parou ? '—' : num(s.ultimo) + ' W',
+        ponto: s.oculta ? '#3d4756' : s.base.cor,
+        fg: s.oculta ? '#5c6879' : '#e6ecf4',
+        valorFg: s.oculta ? '#3d4756' : '#8b98a9',
+        bg: s.oculta ? 'transparent' : 'rgba(255,255,255,0.04)',
+        borda: s.oculta ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.09)',
+        pick: () => {
+          const proximo = Object.assign({}, this.state.ocultas);
+          if (proximo[s.base.label]) delete proximo[s.base.label];
+          else proximo[s.base.label] = true;
+          this.setState({ ocultas: proximo });
+        }
+      })),
+      grade: grade,
+      ticks: periodo.ticks.map((label, i) => ({
+        label: label,
+        x: (g.x0 + (i / (periodo.ticks.length - 1)) * (g.x1 - g.x0)).toFixed(1)
+      })),
+      visiveis: visiveis.map((s) => ({ caminho: this.caminho(s.pontos), cor: s.base.cor })),
+      marcadores: visiveis
+        .filter((s) => s.pontos[idxCruz] !== null)
+        .map((s) => ({
+          x: cruzX.toFixed(1),
+          y: this.py(s.pontos[idxCruz]).toFixed(1),
+          cor: s.base.cor
+        })),
+      fins: visiveis.map((s) => ({
+        x: (s.parou ? this.px(s.ultimoIdx, n) : this.px(n - 1, n)).toFixed(1),
+        y: this.py(s.parou ? s.pontos[s.ultimoIdx] : s.ultimo).toFixed(1),
+        cor: s.base.cor
+      })),
+      rotulos: rotulos.map((r) => ({
+        x: r.x.toFixed(1),
+        y: (r.y + 4).toFixed(1),
+        texto: r.texto,
+        fg: r.s.parou ? '#8b98a9' : r.s.base.cor
+      })),
+      cruz: {
+        x: cruzX.toFixed(1),
+        caixaX: (cruzX - 210).toFixed(1) + 'px',
+        carimbo: this.carimbo(periodo.id, idxCruz / (n - 1)),
+        linhas: visiveis.map((s) => ({
+          label: s.base.label,
+          cor: s.base.cor,
+          valor: s.pontos[idxCruz] === null ? 'sem dados' : num(s.pontos[idxCruz]) + ' W'
+        }))
+      },
+      tabela: series.map((s) => ({
+        label: s.base.label,
+        fora: escopoLocal !== null && s.base.local !== escopoLocal,
+        dispositivo: s.base.dispositivo,
+        dp: s.base.dp,
+        cor: s.oculta ? '#3d4756' : s.base.cor,
+        atual: s.parou ? 'sem dados' : num(s.ultimo) + ' W',
+        atualFg: s.parou ? 'oklch(0.82 0.12 25)' : '#f2f6fb',
+        media: num(s.media) + ' W',
+        maximo: num(s.maximo) + ' W',
+        total: dec(s.total) + ' kWh',
+        opacidade: s.oculta ? '0.45' : '1'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

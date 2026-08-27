@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}Locais e cômodos - Painel Tuya{% endblock %}
+
+{% block breadcrumb %}<span class="current">Locais</span>{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="abrirModal('modalLocal')">
+    {{ m.icone_svg('mais') }} Novo local
+</button>
+{% endblock %}
+
+{% block content %}
+{% set total_locais = grupos|length %}
+{% set total_comodos = grupos|map(attribute='comodos')|map('length')|sum %}
+{% set total_devices = grupos|sum(attribute='total_devices') %}
+{% set total_orfaos = grupos|map(attribute='sem_comodo')|map('length')|sum %}
+
+<div class="page-head">
+    <div class="page-head-text">
+        <h1>Locais e cômodos</h1>
+        <p class="page-lead">Cada dispositivo mora em um cômodo, e cada cômodo dentro de um local.
+        A atribuição é sua — nem o scan de rede nem a reimportação do
+        <span class="mono">devices.json</span> sobrescrevem.</p>
+    </div>
+</div>
+
+<div class="tiles">
+    <div class="tile">
+        <span class="rotulo">Locais</span>
+        <span class="valor">{{ total_locais }}</span>
+        <span class="nota">{{ m.plural(total_comodos, 'cômodo', 'cômodos') }} no total</span>
+    </div>
+    <div class="tile">
+        <span class="rotulo">Dispositivos</span>
+        <span class="valor">{{ total_devices }}</span>
+        <span class="nota">no inventário</span>
+    </div>
+    <div class="tile">
+        <span class="rotulo">{{ m.dot('sem-coleta') }} Sem cômodo</span>
+        <span class="valor {% if total_orfaos %}muted{% endif %}">{{ total_orfaos }}</span>
+        <span class="nota">esperando atribuição</span>
+    </div>
+</div>
+
+{% for g in grupos %}
+<section class="card local-card">
+    <div class="local-topo">
+        <div class="local-ident">
+            <span class="device-icone">
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M9.5 21v-6h5v6"/></svg>
+            </span>
+            <div>
+                <h3><a href="/locais/{{ g.local.id }}">{{ g.local.nome }}</a></h3>
+                <div class="local-meta">
+                    {% if g.local.rede_cidr %}<span class="mono">{{ g.local.rede_cidr }}</span><span class="sep"></span>{% endif %}
+                    <span>{{ m.plural(g.comodos|length, 'cômodo', 'cômodos') }} · {{ m.plural(g.total_devices, 'dispositivo', 'dispositivos') }}</span>
+                    <span class="sep"></span>
+                    <span>{{ m.dot('online', true) }} {{ g.online }} · {{ m.dot('offline', true) }} {{ g.offline }} · {{ m.dot('sem-coleta', true) }} {{ g.nao_monitorados }}</span>
+                </div>
+            </div>
+        </div>
+
+        {% if g.local.id %}
+        <div class="controls" style="margin: 0;">
+            <button class="btn btn-small" onclick="renomearLocal({{ g.local.id }}, {{ g.local.nome|tojson }})">
+                {{ m.icone_svg('lapis', 14) }} Renomear
+            </button>
+            {% set vazio = g.total_devices == 0 and g.comodos|length == 0 %}
+            <button class="btn btn-small btn-danger {% if not vazio %}is-disabled{% endif %}"
+                    {% if not vazio %}title="Mova os {{ g.total_devices }} dispositivos e apague os {{ g.comodos|length }} cômodos antes de excluir"{% endif %}
+                    onclick="excluirLocal({{ g.local.id }}, {{ g.local.nome|tojson }})">
+                {{ m.icone_svg('lixeira', 14) }} Excluir
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="comodo-grid">
+        {% for bloco in g.comodos %}
+        <a class="comodo-chip" href="/locais/{{ g.local.id }}#comodo-{{ bloco.comodo.id }}">
+            <span class="nome">{{ bloco.comodo.nome }}</span>
+            <span class="linha">
+                <span class="qtd">{{ bloco.devices|length }}</span>
+                <span class="dim" style="font-size: 11px;">disp.</span>
+                <span class="pontos">
+                    {% for st in bloco.devices[:6] %}{{ m.dot(m.estado(st)) }}{% endfor %}
+                </span>
+            </span>
+        </a>
+        {% endfor %}
+
+        {% if g.local.id %}
+        <button class="comodo-novo" onclick="novoComodo({{ g.local.id }}, {{ g.local.nome|tojson }})">
+            {{ m.icone_svg('mais', 14) }} Novo cômodo
+        </button>
+        {% endif %}
+    </div>
+
+    {% if g.sem_comodo %}
+    <div class="inbox-row">
+        <span style="display: flex; align-items: center; gap: 11px;">
+            {{ m.dot('sem-coleta') }}
+            <span>Sem cômodo</span>
+            <span class="muted">{{ m.plural(g.sem_comodo|length, 'dispositivo', 'dispositivos') }} esperando</span>
+        </span>
+        <a class="btn btn-small btn-primary" href="/locais/{{ g.local.id }}#sem-comodo">Atribuir</a>
+    </div>
+    {% endif %}
+
+    {% if not g.comodos and not g.sem_comodo %}
+    <p class="dim" style="font-size: 12.5px;">Nenhum cômodo e nenhum dispositivo ainda — este local pode ser excluído.</p>
+    {% endif %}
+</section>
+{% endfor %}
+
+{% if not grupos %}
+<div class="empty-state">
+    <strong>Nenhum local cadastrado</strong>
+    Crie o primeiro local para começar a organizar os dispositivos.
+</div>
+{% endif %}
+
+<div id="modalLocal" class="modal">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-head">
+            <div>
+                <h2>Novo local</h2>
+                <div class="sub">Uma casa, um sítio, um escritório — o nível de cima da hierarquia.</div>
+            </div>
+            <span class="close" onclick="fecharModal('modalLocal')">&times;</span>
+        </div>
+        <form onsubmit="criarLocal(event)">
+            <div class="modal-body">
+                <div class="campo">
+                    <label for="localNome">Nome</label>
+                    <input type="text" id="localNome" required placeholder="ex: Casa Principal">
+                </div>
+                <div class="campo">
+                    <label for="localRede">Rede <span class="hint">opcional</span></label>
+                    <input type="text" id="localRede" placeholder="ex: 192.168.0.0/24">
+                </div>
+                <div class="campo">
+                    <label for="localDesc">Descrição <span class="hint">opcional</span></label>
+                    <textarea id="localDesc"></textarea>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <div class="acoes">
+                    <button type="button" class="btn" onclick="fecharModal('modalLocal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar local</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function criarLocal(ev) {
+    ev.preventDefault();
+    await executar(
+        () => apiPost('/locais', {
+            nome: document.getElementById('localNome').value,
+            rede_cidr: document.getElementById('localRede').value || null,
+            descricao: document.getElementById('localDesc').value || null
+        }),
+        'Local criado',
+        () => { fecharModal('modalLocal'); recarregar(); }
+    );
+}
+
+async function novoComodo(localId, localNome) {
+    const nome = prompt('Novo cômodo em ' + localNome + ':');
+    if (!nome) return;
+    await executar(
+        () => apiPost('/locais/' + localId + '/comodos', { nome: nome }),
+        'Cômodo criado', () => recarregar()
+    );
+}
+
+async function renomearLocal(localId, atual) {
+    const nome = prompt('Novo nome do local:', atual);
+    if (!nome || nome === atual) return;
+    await executar(
+        () => apiPut('/locais/' + localId, { nome: nome }),
+        'Local renomeado', () => recarregar()
+    );
+}
+
+async function excluirLocal(localId, nome) {
+    if (!confirm('Excluir o local "' + nome + '"?')) return;
+    await executar(
+        () => apiDelete('/locais/' + localId),
+        'Local excluído', () => recarregar()
+    );
+}
+
+async function alternarMonitor(el, deviceId) {
+    const ligado = el.classList.contains('on');
+    el.classList.toggle('on');
+    try {
+        await apiPost('/devices/' + deviceId + '/toggle');
+        toastOk(ligado ? 'Monitoramento desligado' : 'Monitoramento ligado');
+        recarregar(900);
+    } catch (erro) {
+        el.classList.toggle('on');
+        toastErro(erro.message);
+    }
+}
+</script>
+{% endblock %}

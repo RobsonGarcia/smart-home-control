@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}{{ group.name }} - Energia{% endblock %}
+
+{% block breadcrumb %}
+<a href="/energy">Energia</a>
+<span class="sep">{{ m.icone_svg('seta', 13) }}</span>
+<span class="current">{{ group.name }}</span>
+{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn" onclick="abrirEscopo()">{{ m.icone_svg('lapis') }} Escopo</button>
+<button class="btn btn-primary" onclick="abrirSerie()">{{ m.icone_svg('mais') }} Adicionar série</button>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div class="page-head-text">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            {{ m.selo_escopo(group) }}
+            <span class="muted" style="font-size: 12.5px;">
+                {% if group.scope_local_id %}
+                    {% if group.fora_do_escopo %}
+                        {{ group.fora_do_escopo }} série{{ 's' if group.fora_do_escopo != 1 }} de outro local, adicionada antes do escopo
+                    {% else %}
+                        só aceita dispositivos deste local
+                    {% endif %}
+                {% else %}
+                    aceita dispositivos de qualquer local
+                {% endif %}
+            </span>
+        </div>
+        <h1>{{ group.name }}</h1>
+        {% if group.description %}<p class="page-lead">{{ group.description }}</p>{% endif %}
+    </div>
+</div>
+
+<div class="filtros">
+    <span class="rotulo">Período</span>
+    <span class="chip" data-periodo="1h" onclick="mudarPeriodo(this)">Última hora</span>
+    <span class="chip" data-periodo="6h" onclick="mudarPeriodo(this)">6 h</span>
+    <span class="chip active" data-periodo="24h" onclick="mudarPeriodo(this)">24 h</span>
+    <span class="chip" data-periodo="7d" onclick="mudarPeriodo(this)">7 dias</span>
+    <span class="chip" data-periodo="30d" onclick="mudarPeriodo(this)">30 dias</span>
+    <span class="muted" id="resumoPontos" style="font-size: 12.5px; margin-left: auto;"></span>
+</div>
+
+<div class="chart-container">
+    <div class="chart-head">
+        <div id="legendaGrafico" class="dps-legend" style="margin: 0;"></div>
+        <span class="muted" style="font-size: 12px; white-space: nowrap;">Clique para ocultar uma série</span>
+    </div>
+    <div style="height: 340px;"><canvas id="graficoGrupo"></canvas></div>
+</div>
+
+<div class="section-rule">
+    <h3>Séries do grupo</h3>
+    <span class="meta">os mesmos números do gráfico, em tabela</span>
+    <span class="rule"></span>
+</div>
+
+{% if group.series %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Série</th>
+            <th>Dispositivo</th>
+            <th>Local / cômodo</th>
+            <th>DP</th>
+            <th class="num">Atual</th>
+            <th class="num">Média</th>
+            <th class="num">Máx</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in group.series %}
+        <tr data-serie="{{ s.id }}">
+            <td>
+                <span style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                    <span class="legend-color" data-serie-cor="{{ s.id }}"></span>
+                    <span style="font-weight: 500; color: var(--text-bright);">{{ s.label }}</span>
+                    {% if s.out_of_scope %}<span class="badge fora-do-local">fora do local</span>{% endif %}
+                    {% if s.device_missing %}<span class="badge sem-coleta">dispositivo removido</span>{% endif %}
+                </span>
+            </td>
+            <td class="muted">{{ s.device_name or s.device_id }}</td>
+            <td class="muted">
+                {%- if s.device_local_nome -%}
+                    {{ s.device_local_nome }}{% if s.device_comodo_nome %} · {{ s.device_comodo_nome }}{% endif %}
+                {%- else -%}<span class="dim">—</span>{%- endif -%}
+            </td>
+            <td class="mono dim">{{ s.dps_code }}</td>
+            <td class="num" data-col="atual">—</td>
+            <td class="num" data-col="media">—</td>
+            <td class="num" data-col="max">—</td>
+            <td style="text-align: right;">
+                <button class="btn btn-small btn-danger btn-icon" title="Remover série"
+                        onclick="removerSerie({{ s.id }}, {{ s.label|tojson }})">
+                    {{ m.icone_svg('lixeira', 14) }}
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <strong>Nenhuma série ainda</strong>
+    Adicione o primeiro canal para o gráfico ter o que desenhar.
+</div>
+{% endif %}
+
+<!-- ------------------------------------------------ modal: adicionar série -->
+<div id="modalSerie" class="modal">
+    <div class="modal-content">
+        <div class="modal-head">
+            <div>
+                <h2>Adicionar série</h2>
+                <div class="sub">
+                    Grupo <span style="color: var(--text-2);">{{ group.name }}</span>
+                    {% if group.scope_local_id %} · só dispositivos de <span style="color: var(--text-2);">{{ group.scope_local_nome }}</span>{% endif %}
+                </div>
+            </div>
+            <span class="close" onclick="fecharModal('modalSerie')">&times;</span>
+        </div>
+        <form onsubmit="adicionarSerie(event)">
+            <div class="modal-body">
+                <div class="campo">
+                    <label for="serieDevice">Dispositivo</label>
+                    <select id="serieDevice" required onchange="carregarDps()">
+                        <option value="">Carregando…</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="serieDps">Canal (DP)</label>
+                    <div class="dps-input-group">
+                        <select id="serieDps" required onchange="mudarDps()">
+                            <option value="">Selecione um dispositivo primeiro…</option>
+                        </select>
+                        <input type="text" id="serieDpsCustom" list="dpsSugestoes"
+                               placeholder="ex: cur_power_3" style="display: none;">
+                        <datalist id="dpsSugestoes"></datalist>
+                    </div>
+                </div>
+
+                <div class="campo">
+                    <label for="serieLabel">Rótulo no gráfico <span class="hint">opcional</span></label>
+                    <input type="text" id="serieLabel" placeholder="preenchido a partir do DP se ficar vazio">
+                </div>
+
+                {% if group.scope_local_id %}
+                <div class="aviso accent">
+                    {{ m.icone_svg('info', 16) }}
+                    <span>Este grupo é do local <strong>{{ group.scope_local_nome }}</strong>, então só lista
+                    dispositivos de lá — o servidor recusa uma série de fora.</span>
+                </div>
+                {% endif %}
+
+                <div class="aviso">
+                    {{ m.icone_svg('info', 16) }}
+                    <span>Mantenha o grupo numa unidade só. Misturar W e kWh no mesmo gráfico exigiria
+                    dois eixos, e duas escalas arbitrárias inventam uma correlação que não existe —
+                    crie outro grupo para a outra unidade.</span>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <div class="acoes">
+                    <button type="button" class="btn" onclick="fecharModal('modalSerie')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar ao grupo</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ------------------------------------------------------- modal: escopo -->
+<div id="modalEscopo" class="modal">
+    <div class="modal-content" style="max-width: 560px;">
+        <div class="modal-head">
+            <div>
+                <h2>Escopo do grupo</h2>
+                <div class="sub">Trocar o escopo não apaga série nenhuma — as que ficarem de fora passam a vir marcadas.</div>
+            </div>
+            <span class="close" onclick="fecharModal('modalEscopo')">&times;</span>
+        </div>
+        <form onsubmit="salvarEscopo(event)">
+            <div class="modal-body">
+                <div class="campo">
+                    <label for="escopoLocal">Local</label>
+                    <select id="escopoLocal">
+                        <option value="">Geral — qualquer local</option>
+                        {% for l in locais %}
+                        <option value="{{ l.id }}" {% if group.scope_local_id == l.id %}selected{% endif %}>{{ l.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <div class="acoes">
+                    <button type="button" class="btn" onclick="fecharModal('modalEscopo')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar escopo</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const GRUPO_ID = {{ group.id }};
+const SERIES = [
+    {% for s in group.series %}
+    { id: {{ s.id }}, label: {{ s.label|tojson }}, dps: {{ s.dps_code|tojson }},
+      fora: {{ 'true' if s.out_of_scope else 'false' }} }{{ ',' if not loop.last }}
+    {% endfor %}
+];
+
+// Cor por id da série. Ocultar ou remover uma não repinta as outras.
+const CORES = coresDeSeries(SERIES);
+const visiveis = {};
+SERIES.forEach((s) => { visiveis[s.id] = true; });
+
+let grafico = null;
+let periodo = '24h';
+
+document.querySelectorAll('[data-serie-cor]').forEach((el) => {
+    el.style.backgroundColor = CORES[el.dataset.serieCor];
+});
+
+function inicioDoPeriodo() {
+    const agora = new Date();
+    const inicio = new Date();
+    if (periodo === '1h') inicio.setHours(inicio.getHours() - 1);
+    else if (periodo === '6h') inicio.setHours(inicio.getHours() - 6);
+    else if (periodo === '24h') inicio.setDate(inicio.getDate() - 1);
+    else if (periodo === '7d') inicio.setDate(inicio.getDate() - 7);
+    else if (periodo === '30d') inicio.setDate(inicio.getDate() - 30);
+    // O backend compara com collected_at, que está em UTC.
+    const iso = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+    return { inicio: iso(inicio), fim: iso(agora) };
+}
+
+async function carregarDados() {
+    const { inicio, fim } = inicioDoPeriodo();
+    const dados = await executar(
+        () => apiGet('/energy/api/groups/' + GRUPO_ID + '/data?start=' + encodeURIComponent(inicio) +
+                     '&end=' + encodeURIComponent(fim))
+    );
+    if (!dados) return;
+
+    let pontos = 0;
+    dados.series.forEach((s) => { pontos += s.data.length; });
+    document.getElementById('resumoPontos').textContent =
+        pontos + ' ponto' + (pontos === 1 ? '' : 's') + ' no período';
+
+    montarLegenda(dados.series);
+    preencherTabela(dados.series);
+    desenhar(dados.series);
+}
+
+function estatisticas(serie) {
+    const vals = serie.data.map((p) => Number(p.value)).filter((v) => !isNaN(v));
+    if (!vals.length) return null;
+    const soma = vals.reduce((a, b) => a + b, 0);
+    return { atual: vals[vals.length - 1], media: soma / vals.length, max: Math.max.apply(null, vals) };
+}
+
+function montarLegenda(series) {
+    const legenda = document.getElementById('legendaGrafico');
+    legenda.innerHTML = '';
+
+    series.forEach((serie) => {
+        const est = estatisticas(serie);
+        const item = document.createElement('span');
+        item.className = 'dps-legend-item' + (visiveis[serie.id] ? '' : ' off');
+        item.innerHTML = '<span class="legend-color"></span><span></span><span class="valor"></span>';
+        item.children[0].style.backgroundColor = CORES[serie.id];
+        item.children[1].textContent = serie.label;
+        item.children[2].textContent = est ? numero(est.atual, 1) : 'sem dados';
+        item.addEventListener('click', () => {
+            visiveis[serie.id] = !visiveis[serie.id];
+            item.classList.toggle('off', !visiveis[serie.id]);
+            desenhar(series);
+        });
+        legenda.appendChild(item);
+    });
+
+    if (CORES.__excedentes) {
+        const nota = document.createElement('span');
+        nota.className = 'dps-legend-item off';
+        nota.textContent = CORES.__excedentes + ' série(s) além das 8 cores — em cinza';
+        legenda.appendChild(nota);
+    }
+}
+
+function preencherTabela(series) {
+    series.forEach((serie) => {
+        const linha = document.querySelector('tr[data-serie="' + serie.id + '"]');
+        if (!linha) return;
+        const est = estatisticas(serie);
+        linha.querySelector('[data-col="atual"]').textContent = est ? numero(est.atual, 1) : 'sem dados';
+        linha.querySelector('[data-col="media"]').textContent = est ? numero(est.media, 1) : '—';
+        linha.querySelector('[data-col="max"]').textContent = est ? numero(est.max, 1) : '—';
+    });
+}
+
+function desenhar(series) {
+    const canvas = document.getElementById('graficoGrupo');
+    if (!canvas) return;
+
+    const datasets = series
+        .filter((s) => visiveis[s.id])
+        .map((s) => datasetDeSerie(
+            s.label,
+            s.data.map((p) => ({ x: p.timestamp, y: p.value })),
+            CORES[s.id]
+        ));
+
+    if (grafico) grafico.destroy();
+    grafico = new Chart(canvas.getContext('2d'), configGraficoLinha(datasets));
+}
+
+function mudarPeriodo(el) {
+    document.querySelectorAll('[data-periodo]').forEach((c) => c.classList.remove('active'));
+    el.classList.add('active');
+    periodo = el.getAttribute('data-periodo');
+    carregarDados();
+}
+
+/* --------------------------------------------------------- adicionar série */
+
+let dispositivosDoEscopo = [];
+
+async function abrirSerie() {
+    abrirModal('modalSerie');
+    const sel = document.getElementById('serieDevice');
+    const dados = await executar(() => apiGet('/energy/api/groups/' + GRUPO_ID + '/devices'));
+    if (!dados) return;
+
+    dispositivosDoEscopo = dados.devices;
+    sel.innerHTML = '<option value="">Selecione um dispositivo…</option>';
+    dados.devices.forEach((d) => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        const onde = d.comodo ? (d.local + ' · ' + d.comodo) : (d.local || 'sem local');
+        opt.textContent = d.name + ' — ' + onde + (d.monitorado ? '' : ' (sem coleta)');
+        sel.appendChild(opt);
+    });
+}
+
+async function carregarDps() {
+    const deviceId = document.getElementById('serieDevice').value;
+    const sel = document.getElementById('serieDps');
+    document.getElementById('serieDpsCustom').style.display = 'none';
+
+    if (!deviceId) {
+        sel.innerHTML = '<option value="">Selecione um dispositivo primeiro…</option>';
+        return;
+    }
+
+    sel.innerHTML = '<option value="">Carregando…</option>';
+    const dados = await executar(() => apiGet('/energy/api/device/' + deviceId + '/dps'));
+    if (!dados) { sel.innerHTML = '<option value="">Erro ao carregar DPs</option>'; return; }
+
+    sel.innerHTML = '<option value="">Selecione um canal…</option>';
+    (dados.available_dps || []).forEach((dp) => {
+        const opt = document.createElement('option');
+        opt.value = dp.code;
+        opt.dataset.nome = dp.name;
+        // A unidade fica visível: um grupo deve ficar numa unidade só.
+        opt.textContent = dp.name + (dp.unit ? ' — ' + dp.unit : '') + '  (' + dp.code + ')';
+        sel.appendChild(opt);
+    });
+    if (!(dados.available_dps || []).length) {
+        sel.innerHTML += '<option value="" disabled>Sem DPs mapeados — digite o código à mão</option>';
+    }
+
+    // Aparelho sem mapping_json: o servidor manda os códigos nomeados
+    // conhecidos como sugestão para o campo livre.
+    const lista = document.getElementById('dpsSugestoes');
+    lista.innerHTML = '';
+    (dados.sugestoes || []).forEach((dp) => {
+        const opt = document.createElement('option');
+        opt.value = dp.code;
+        opt.label = dp.name;
+        lista.appendChild(opt);
+    });
+    const custom = document.createElement('option');
+    custom.value = '__custom__';
+    custom.textContent = '— digitar outro código —';
+    sel.appendChild(custom);
+}
+
+function mudarDps() {
+    const sel = document.getElementById('serieDps');
+    const custom = document.getElementById('serieDpsCustom');
+    custom.style.display = sel.value === '__custom__' ? '' : 'none';
+    if (sel.value === '__custom__') custom.focus();
+}
+
+async function adicionarSerie(ev) {
+    ev.preventDefault();
+    const sel = document.getElementById('serieDps');
+    let dps = sel.value;
+    if (dps === '__custom__') {
+        dps = document.getElementById('serieDpsCustom').value.trim();
+        if (!dps) { toastErro('Digite um código de DP'); return; }
+    }
+
+    let label = document.getElementById('serieLabel').value.trim();
+    if (!label) {
+        const opt = sel.options[sel.selectedIndex];
+        label = (opt && opt.dataset.nome) || dps;
+    }
+
+    await executar(
+        () => apiPost('/energy/' + GRUPO_ID + '/series', {
+            device_id: document.getElementById('serieDevice').value,
+            dps_code: dps,
+            label: label
+        }),
+        'Série adicionada',
+        () => { fecharModal('modalSerie'); recarregar(); }
+    );
+}
+
+async function removerSerie(id, label) {
+    if (!confirm('Remover a série "' + label + '"?')) return;
+    await executar(() => apiDelete('/energy/' + GRUPO_ID + '/series/' + id),
+                   'Série removida', () => recarregar());
+}
+
+/* ------------------------------------------------------------------ escopo */
+
+function abrirEscopo() { abrirModal('modalEscopo'); }
+
+async function salvarEscopo(ev) {
+    ev.preventDefault();
+    const valor = document.getElementById('escopoLocal').value;
+    await executar(
+        () => apiPut('/energy/' + GRUPO_ID, { scope_local_id: valor ? parseInt(valor, 10) : null }),
+        null,
+        (r) => {
+            fecharModal('modalEscopo');
+            toastOk(r.out_of_scope_count
+                ? 'Escopo salvo — ' + r.out_of_scope_count + ' série(s) ficaram fora do local, marcadas mas não apagadas'
+                : 'Escopo salvo');
+            recarregar(1400);
+        }
+    );
+}
+
+carregarDados();
+</script>
+{% endblock %}

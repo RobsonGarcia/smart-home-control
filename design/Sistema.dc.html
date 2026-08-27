@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    a { color: oklch(0.78 0.12 258); text-decoration: none; }
+    a:hover { color: oklch(0.88 0.08 258); }
+  </style>
+</helmet>
+
+<div style="width: 1040px; min-height: 1240px; background-color: #0b0e13; background-image: radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px); background-size: 24px 24px; color: #e6ecf4; padding: 36px; display: flex; flex-direction: column; gap: 34px;">
+
+  <header style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #6b7889;">Sistema visual</div>
+    <h1 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 38px; font-weight: 600; letter-spacing: -1.1px; color: #f4f8fd;">Estados, cores e componentes</h1>
+    <p style="margin: 0; max-width: 640px; font-size: 13.5px; line-height: 1.6; color: #8b98a9; text-wrap: pretty;">A referência que as telas seguem. Três estados de dispositivo, uma cor de marca, neutros frios e números sempre em monoespaçado para alinhar leituras.</p>
+  </header>
+
+  <section style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <h3 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: #eaf0f7; white-space: nowrap;">Paleta</h3>
+      <span style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.07);"></span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 62px; border-radius: 10px; background: #0b0e13; border: 1px solid rgba(255,255,255,0.09);"></div>
+        <div style="font-size: 12px; font-weight: 500; color: #e6ecf4;">Fundo</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #6b7889;">#0b0e13</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 62px; border-radius: 10px; background: #0f141b; border: 1px solid rgba(255,255,255,0.09);"></div>
+        <div style="font-size: 12px; font-weight: 500; color: #e6ecf4;">Superfície</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #6b7889;">#0f141b</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 62px; border-radius: 10px; background: #6f9bff;"></div>
+        <div style="font-size: 12px; font-weight: 500; color: #e6ecf4;">Marca</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #6b7889;">#6f9bff</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 62px; border-radius: 10px; background: oklch(0.78 0.15 158);"></div>
+        <div style="font-size: 12px; font-weight: 500; color: #e6ecf4;">Online</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #6b7889;">L.78 C.15 H158</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 62px; border-radius: 10px; background: oklch(0.68 0.18 25);"></div>
+        <div style="font-size: 12px; font-weight: 500; color: #e6ecf4;">Offline</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #6b7889;">L.68 C.18 H25</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 62px; border-radius: 10px; background: #4e5a6b;"></div>
+        <div style="font-size: 12px; font-weight: 500; color: #e6ecf4;">Sem coleta</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #6b7889;">#4e5a6b</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <h3 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: #eaf0f7; white-space: nowrap;">Tipografia</h3>
+      <span style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.07);"></span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+      <div style="border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6b7889;">Títulos · Space Grotesk</div>
+        <div style="font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 34px; font-weight: 600; letter-spacing: -1px; line-height: 1.05; color: #f4f8fd;">Casa Principal</div>
+        <div style="font-size: 11.5px; color: #6b7889;">46 / 40 / 19 / 17 px · peso 600 · tracking negativo</div>
+      </div>
+      <div style="border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6b7889;">Texto · IBM Plex Sans</div>
+        <div style="font-size: 15px; line-height: 1.55; color: #e6ecf4;">Aparelhos que estão no inventário mas ainda não têm coleta ativa.</div>
+        <div style="font-size: 11.5px; color: #6b7889;">15 / 13.5 / 12.5 / 11.5 px · pesos 400–600</div>
+      </div>
+      <div style="border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6b7889;">Números · IBM Plex Mono</div>
+        <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 30px; font-weight: 500; letter-spacing: -1px; color: #f4f8fd;">4,71 kW · 221 V</div>
+        <div style="font-size: 11.5px; color: #6b7889;">toda leitura, IP, ID e intervalo em mono</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <h3 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: #eaf0f7; white-space: nowrap;">Os três estados</h3>
+      <span style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.07);"></span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+
+      <div style="display: flex; flex-direction: column; gap: 14px; border-radius: 14px; padding: 18px; background: #0f141b; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); color: #cbd5e2;">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4M15 3v4M6.5 7h11v3.5a5.5 5.5 0 0 1-11 0V7Z"></path><path d="M12 16.5V21"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1;">
+            <div style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px; color: #f2f6fb;">Tomada TV</div>
+            <div style="font-size: 11.5px; color: #6b7889;">Tomada inteligente</div>
+          </div>
+          <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; background: oklch(0.78 0.15 158); box-shadow: 0 0 0 4px oklch(0.78 0.15 158 / 0.16);"></span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 7px;">
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 23px; font-weight: 500; letter-spacing: -0.8px; color: #f4f8fd;">82</span>
+          <span style="font-size: 13px; color: #6b7889;">W agora</span>
+        </div>
+        <div style="font-size: 12.5px; line-height: 1.45; color: #8b98a9;">Respondeu na LAN há 12 s. Card sólido, leitura em destaque.</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; background: oklch(0.78 0.15 158 / 0.12); color: oklch(0.86 0.11 158); border: 1px solid oklch(0.78 0.15 158 / 0.26);">Online</span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">192.168.0.42</span>
+          </div>
+          <span style="width: 34px; height: 20px; border-radius: 999px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; padding: 2px; background: #6f9bff;">
+            <span style="width: 15px; height: 15px; border-radius: 50%; background: #05070a;"></span>
+          </span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; border-radius: 14px; padding: 18px; background: #0f141b; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); color: #cbd5e2;">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5h10.2v9H3.5z"></path><path d="M13.7 11l6.8-3v8l-6.8-3z"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1;">
+            <div style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px; color: #f2f6fb;">Câmera Sala</div>
+            <div style="font-size: 11.5px; color: #6b7889;">Câmera IP</div>
+          </div>
+          <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; background: oklch(0.68 0.18 25); box-shadow: 0 0 0 4px oklch(0.68 0.18 25 / 0.16);"></span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 7px;">
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 23px; font-weight: 500; letter-spacing: -0.8px; color: oklch(0.82 0.12 25);">2h 14</span>
+          <span style="font-size: 13px; color: #6b7889;">sem resposta</span>
+        </div>
+        <div style="font-size: 12.5px; line-height: 1.45; color: #8b98a9;">Monitorado, mas mudo. O tempo parado ocupa o lugar da leitura.</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; background: oklch(0.68 0.18 25 / 0.12); color: oklch(0.82 0.12 25); border: 1px solid oklch(0.68 0.18 25 / 0.26);">Offline</span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">192.168.0.77</span>
+          </div>
+          <span style="width: 34px; height: 20px; border-radius: 999px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; padding: 2px; background: #6f9bff;">
+            <span style="width: 15px; height: 15px; border-radius: 50%; background: #05070a;"></span>
+          </span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; border-radius: 14px; padding: 18px; background: rgba(255,255,255,0.015); border: 1px dashed rgba(255,255,255,0.12);">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); color: #5c6879;">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 14.4V5.2a1.6 1.6 0 1 0-3.2 0v9.2a3.4 3.4 0 1 0 3.2 0Z"></path><path d="M12 12.4v3.4"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1;">
+            <div style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px; color: #8b98a9;">Sensor Cozinha</div>
+            <div style="font-size: 11.5px; color: #6b7889;">Sensor temp./umidade</div>
+          </div>
+          <span style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; background: #4e5a6b; box-shadow: 0 0 0 4px rgba(255,255,255,0.05);"></span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 7px;">
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 23px; font-weight: 500; letter-spacing: -0.8px; color: #4e5a6b;">—</span>
+          <span style="font-size: 13px; color: #6b7889;">sem coleta</span>
+        </div>
+        <div style="font-size: 12.5px; line-height: 1.45; color: #5c6879;">Existe no inventário, nunca foi lido. Borda tracejada e tudo esmaecido.</div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; background: rgba(255,255,255,0.05); color: #8b98a9; border: 1px solid rgba(255,255,255,0.10);">Não monitorado</span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">sem IP</span>
+          </div>
+          <span style="width: 34px; height: 20px; border-radius: 999px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start; padding: 2px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);">
+            <span style="width: 15px; height: 15px; border-radius: 50%; background: #6b7889;"></span>
+          </span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <h3 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: #eaf0f7; white-space: nowrap;">Controles</h3>
+      <span style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.07);"></span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+      <div style="border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6b7889;">Botões</div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div style="padding: 9px 15px; border-radius: 9px; font-size: 13px; font-weight: 600; color: #05070a; background: #6f9bff;">Novo cômodo</div>
+          <div style="padding: 9px 15px; border-radius: 9px; font-size: 13px; font-weight: 500; color: #cbd5e2; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);">Escanear rede</div>
+        </div>
+        <div style="font-size: 11.5px; color: #6b7889;">Altura 36 px no desktop, 44 px no toque.</div>
+      </div>
+
+      <div style="border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6b7889;">Filtros</div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <div style="padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; background: #f2f6fb; color: #0b0e13;">Todos</div>
+          <div style="padding: 8px 14px; border-radius: 999px; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09); color: #cbd5e2;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: oklch(0.78 0.15 158);"></span>
+            Online
+          </div>
+        </div>
+        <div style="font-size: 11.5px; color: #6b7889;">Selecionado inverte para fundo claro.</div>
+      </div>
+
+      <div style="border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #6b7889;">Monitorar</div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 9px;">
+            <span style="width: 34px; height: 20px; border-radius: 999px; display: flex; align-items: center; justify-content: flex-end; padding: 2px; background: #6f9bff;"><span style="width: 15px; height: 15px; border-radius: 50%; background: #05070a;"></span></span>
+            <span style="font-size: 12.5px; color: #cbd5e2;">Ligado</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 9px;">
+            <span style="width: 34px; height: 20px; border-radius: 999px; display: flex; align-items: center; justify-content: flex-start; padding: 2px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);"><span style="width: 15px; height: 15px; border-radius: 50%; background: #6b7889;"></span></span>
+            <span style="font-size: 12.5px; color: #6b7889;">Desligado</span>
+          </div>
+        </div>
+        <div style="font-size: 11.5px; color: #6b7889;">Desligar move o aparelho para “não monitorado”.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1040,"height":1240}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

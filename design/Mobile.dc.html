@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    a { color: oklch(0.78 0.12 258); text-decoration: none; }
+    a:hover { color: oklch(0.88 0.08 258); }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; display: flex; flex-direction: column; background-color: #0b0e13; background-image: radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px); background-size: 22px 22px; color: #e6ecf4; overflow: hidden;">
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; gap: 18px; padding: 22px 18px 0;">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+        <h1 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 27px; font-weight: 600; letter-spacing: -0.8px; color: #f4f8fd;">Casa Principal</h1>
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#6b7889" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 4px;"><path d="m6 9.5 6 6 6-6"></path></svg>
+      </div>
+      <span style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e2;">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"></path><path d="M18.6 3.4V6h-2.6"></path></svg>
+      </span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px;">
+      <div style="border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 13px 12px; display: flex; flex-direction: column; gap: 7px;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: oklch(0.78 0.15 158); box-shadow: 0 0 0 4px oklch(0.78 0.15 158 / 0.16);"></span>
+        <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 26px; font-weight: 500; line-height: 1; letter-spacing: -1px; color: #f4f8fd;">6</span>
+        <span style="font-size: 11px; color: #8b98a9;">Online</span>
+      </div>
+      <div style="border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 13px 12px; display: flex; flex-direction: column; gap: 7px;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: oklch(0.68 0.18 25); box-shadow: 0 0 0 4px oklch(0.68 0.18 25 / 0.16);"></span>
+        <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 26px; font-weight: 500; line-height: 1; letter-spacing: -1px; color: #f4f8fd;">2</span>
+        <span style="font-size: 11px; color: #8b98a9;">Offline</span>
+      </div>
+      <div style="border-radius: 13px; border: 1px dashed rgba(255,255,255,0.12); background: rgba(255,255,255,0.015); padding: 13px 12px; display: flex; flex-direction: column; gap: 7px;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #4e5a6b; box-shadow: 0 0 0 4px rgba(255,255,255,0.05);"></span>
+        <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 26px; font-weight: 500; line-height: 1; letter-spacing: -1px; color: #8b98a9;">2</span>
+        <span style="font-size: 11px; color: #6b7889;">Sem coleta</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="padding: 10px 15px; border-radius: 999px; font-size: 13px; font-weight: 500; background: #f2f6fb; color: #0b0e13; white-space: nowrap;">Todos</div>
+      <div style="padding: 10px 15px; border-radius: 999px; font-size: 13px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09); color: #cbd5e2; white-space: nowrap;">Online</div>
+      <div style="padding: 10px 15px; border-radius: 999px; font-size: 13px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09); color: #cbd5e2; white-space: nowrap;">Offline</div>
+      <div style="padding: 10px 15px; border-radius: 999px; font-size: 13px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09); color: #6b7889; white-space: nowrap;">Sem coleta</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+
+      <section style="display: flex; flex-direction: column; gap: 9px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h3 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: -0.2px; color: #eaf0f7; white-space: nowrap;">Sala de Estar</h3>
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6b7889;">2/3 online</span>
+          <span style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.07);"></span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 12px 14px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); color: #cbd5e2;">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4M15 3v4M6.5 7h11v3.5a5.5 5.5 0 0 1-11 0V7Z"></path><path d="M12 16.5V21"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1;">
+            <span style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px; color: #f2f6fb;">Tomada TV</span>
+            <span style="font-size: 11.5px; color: #8b98a9;">82 W agora · 1,9 kWh hoje</span>
+          </div>
+          <span style="width: 44px; height: 26px; flex-shrink: 0; border-radius: 999px; display: flex; align-items: center; justify-content: flex-end; padding: 3px; background: #6f9bff;">
+            <span style="width: 20px; height: 20px; border-radius: 50%; background: #05070a;"></span>
+          </span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 12px 14px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); color: #cbd5e2;">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8h11a4 4 0 0 1 0 8h-11a4 4 0 0 1 0-8Z"></path><path d="M8.8 10.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8Z"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1;">
+            <span style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px; color: #f2f6fb;">Luz Sala</span>
+            <span style="font-size: 11.5px; color: #8b98a9;">2 de 3 canais ligados</span>
+          </div>
+          <span style="width: 44px; height: 26px; flex-shrink: 0; border-radius: 999px; display: flex; align-items: center; justify-content: flex-end; padding: 3px; background: #6f9bff;">
+            <span style="width: 20px; height: 20px; border-radius: 50%; background: #05070a;"></span>
+          </span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 12px 14px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); color: #cbd5e2;">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5h10.2v9H3.5z"></path><path d="M13.7 11l6.8-3v8l-6.8-3z"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1;">
+            <span style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px; color: #f2f6fb;">Câmera Sala</span>
+            <span style="font-size: 11.5px; color: oklch(0.82 0.12 25);">Sem resposta há 2 h 14 min</span>
+          </div>
+          <span style="width: 44px; height: 26px; flex-shrink: 0; border-radius: 999px; display: flex; align-items: center; justify-content: flex-end; padding: 3px; background: #6f9bff;">
+            <span style="width: 20px; height: 20px; border-radius: 50%; background: #05070a;"></span>
+          </span>
+        </div>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 9px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h3 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: -0.2px; color: #eaf0f7; white-space: nowrap;">Cozinha</h3>
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #6b7889;">2/3 online</span>
+          <span style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.07);"></span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; border-radius: 13px; border: 1px solid rgba(255,255,255,0.07); background: #0f141b; padding: 12px 14px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); color: #cbd5e2;">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6Z"></path><path d="M12 8.4V12l2.6 1.8"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1;">
+            <span style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px; color: #f2f6fb;">Medidor Quadro</span>
+            <span style="font-size: 11.5px; color: #8b98a9;">4,71 kW · 221 V · 21,3 A</span>
+          </div>
+          <span style="width: 44px; height: 26px; flex-shrink: 0; border-radius: 999px; display: flex; align-items: center; justify-content: flex-end; padding: 3px; background: #6f9bff;">
+            <span style="width: 20px; height: 20px; border-radius: 50%; background: #05070a;"></span>
+          </span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; border-radius: 13px; border: 1px dashed rgba(255,255,255,0.12); background: rgba(255,255,255,0.015); padding: 12px 14px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); color: #5c6879;">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 14.4V5.2a1.6 1.6 0 1 0-3.2 0v9.2a3.4 3.4 0 1 0 3.2 0Z"></path><path d="M12 12.4v3.4"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1;">
+            <span style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px; color: #8b98a9;">Sensor Cozinha</span>
+            <span style="font-size: 11.5px; color: #6b7889;">No inventário · sem coleta</span>
+          </div>
+          <span style="width: 44px; height: 26px; flex-shrink: 0; border-radius: 999px; display: flex; align-items: center; justify-content: flex-start; padding: 3px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);">
+            <span style="width: 20px; height: 20px; border-radius: 50%; background: #6b7889;"></span>
+          </span>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <nav style="flex-shrink: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 10px 14px 22px; border-top: 1px solid rgba(255,255,255,0.07); background: rgba(8,11,15,0.92);">
+    <div style="height: 48px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6f9bff;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"></path><path d="M9.5 21v-6h5v6"></path></svg>
+      <span style="font-size: 10.5px; font-weight: 500;">Locais</span>
+    </div>
+    <div style="height: 48px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7889;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5h6v6h-6zM13.5 5h6v6h-6zM4.5 14h6v6h-6zM13.5 14h6v6h-6z"></path></svg>
+      <span style="font-size: 10.5px;">Aparelhos</span>
+    </div>
+    <div style="height: 48px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7889;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 3 5.5 13.6h5.4L10.2 21l7.7-10.6h-5.4L13.2 3Z"></path></svg>
+      <span style="font-size: 10.5px;">Energia</span>
+    </div>
+    <div style="height: 48px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7889;">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"></path><path d="M4.6 12a7.4 7.4 0 0 1 .1-1.2l-2-1.5 2-3.4 2.3 1a7.4 7.4 0 0 1 2.1-1.2L9.5 3h4l.4 2.7c.8.3 1.5.7 2.1 1.2l2.3-1 2 3.4-2 1.5a7.4 7.4 0 0 1 0 2.4l2 1.5-2 3.4-2.3-1c-.6.5-1.3.9-2.1 1.2L13.5 21h-4l-.4-2.7a7.4 7.4 0 0 1-2.1-1.2l-2.3 1-2-3.4 2-1.5A7.4 7.4 0 0 1 4.6 12Z"></path></svg>
+      <span style="font-size: 10.5px;">Ajustes</span>
+    </div>
+  </nav>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

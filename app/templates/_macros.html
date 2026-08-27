@@ -1,0 +1,137 @@
+{# =========================================================================
+   Peças reusadas pelas telas. O estado do dispositivo é decidido em UM lugar
+   só, aqui — três estados, e "não monitorado" não é um offline qualquer.
+   ========================================================================= #}
+
+{% macro plural(n, singular, plural_) -%}
+{{ n }} {{ singular if n == 1 else plural_ }}
+{%- endmacro %}
+
+{% macro estado(st) -%}
+{%- if not st.config.enabled -%}sem-coleta
+{%- elif st.is_online -%}online
+{%- else -%}offline
+{%- endif -%}
+{%- endmacro %}
+
+{% macro rotulo_estado(e) -%}
+{%- if e == 'online' -%}Online
+{%- elif e == 'offline' -%}Offline
+{%- else -%}Não monitorado
+{%- endif -%}
+{%- endmacro %}
+
+{% macro dot(e, plain=false) -%}
+<span class="dot {{ e }}{% if plain %} plain{% endif %}"></span>
+{%- endmacro %}
+
+{% macro badge(e) -%}
+<span class="badge {{ e }}">{{ rotulo_estado(e) }}</span>
+{%- endmacro %}
+
+{# Ícone por categoria Tuya. Traço, grade de 24, um estilo só — nunca emoji. #}
+{% macro icone(categoria, tam=19) -%}
+{%- set c = (categoria or '')|lower -%}
+<svg viewBox="0 0 24 24" width="{{ tam }}" height="{{ tam }}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+{%- if c in ('cz', 'pc', 'wkcz') -%}
+  <path d="M9 3v4M15 3v4M6.5 7h11v3.5a5.5 5.5 0 0 1-11 0V7Z"/><path d="M12 16.5V21"/>
+{%- elif c in ('kg', 'tgkg', 'dj', 'dd', 'fwd') -%}
+  <path d="M6.5 8h11a4 4 0 0 1 0 8h-11a4 4 0 0 1 0-8Z"/><path d="M8.8 10.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8Z"/>
+{%- elif c in ('sp', 'videohd') -%}
+  <path d="M3.5 7.5h10.2v9H3.5z"/><path d="M13.7 11l6.8-3v8l-6.8-3z"/>
+{%- elif c in ('zndb', 'znrb', 'aqcz') -%}
+  <path d="M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6Z"/><path d="M12 8.4V12l2.6 1.8"/>
+{%- elif c in ('wsdcg', 'ldcg', 'mcs', 'pir') -%}
+  <path d="M13.6 14.4V5.2a1.6 1.6 0 1 0-3.2 0v9.2a3.4 3.4 0 1 0 3.2 0Z"/><path d="M12 12.4v3.4"/>
+{%- else -%}
+  <path d="M5 6.5h14v11H5z"/><path d="M9 10.5h6"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}
+
+{% macro toggle(st) -%}
+<span class="toggle {% if st.config.enabled %}on{% endif %}"
+      role="switch" aria-checked="{{ 'true' if st.config.enabled else 'false' }}"
+      title="{{ 'Monitoramento ligado' if st.config.enabled else 'Monitoramento desligado' }}"
+      onclick="alternarMonitor(this, '{{ st.device.id }}')">
+    <span class="knob"></span>
+</span>
+{%- endmacro %}
+
+{# A leitura em destaque muda com o estado: online mostra o valor, offline
+   mostra há quanto tempo está calado, não monitorado não mostra nada. #}
+{% macro leitura(st, e) -%}
+<div class="device-leitura">
+{%- if e == 'sem-coleta' -%}
+    <span class="device-valor">—</span><span class="device-unidade">sem coleta</span>
+{%- elif e == 'offline' -%}
+    <span class="device-valor offline" data-tempo="{{ st.reading.collected_at if st.reading else '' }}">—</span>
+    <span class="device-unidade">sem resposta</span>
+{%- else -%}
+    <span class="device-valor" data-tempo="{{ st.reading.collected_at if st.reading else '' }}">—</span>
+    <span class="device-unidade">última leitura</span>
+{%- endif -%}
+</div>
+{%- endmacro %}
+
+{% macro device_card(st) -%}
+{% set e = estado(st) %}
+<div class="device-card {{ e }}">
+    <div class="device-topo">
+        <span class="device-icone">{{ icone(st.device.category) }}</span>
+        <span class="device-ident">
+            <a href="/devices/{{ st.device.id }}" class="device-nome">{{ st.device.name }}</a>
+            <span class="device-cat">{{ st.device.product_name or st.device.category or 'Dispositivo Tuya' }}</span>
+        </span>
+        {{ dot(e) }}
+    </div>
+
+    {{ leitura(st, e) }}
+
+    <div class="device-nota">
+        {%- if e == 'sem-coleta' -%}
+            No inventário, sem coleta ativa.
+        {%- elif st.device.ip -%}
+            Protocolo v{{ st.device.protocol_version or '?' }} · coleta a cada {{ st.config.poll_interval_seconds }} s
+        {%- else -%}
+            Sem IP conhecido — precisa aparecer num scan da rede.
+        {%- endif -%}
+    </div>
+
+    <div class="device-pe">
+        <span style="display: flex; align-items: center; gap: 8px;">
+            {{ badge(e) }}
+            <span class="mono">{{ st.device.ip or 'sem IP' }}</span>
+        </span>
+        {{ toggle(st) }}
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro selo_escopo(group) -%}
+{%- if group.scope_local_id -%}
+<span class="badge escopo-local">
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>
+    {{ group.scope_local_nome or 'Local' }}
+</span>
+{%- else -%}
+<span class="badge escopo-geral">
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h15M12 4.5v15"/></svg>
+    Geral
+</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro icone_svg(nome, tam=15) -%}
+<svg viewBox="0 0 24 24" width="{{ tam }}" height="{{ tam }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+{%- if nome == 'mais' -%}<path d="M12 5.5v13M5.5 12h13"/>
+{%- elif nome == 'lixeira' -%}<path d="M5 7h14"/><path d="M9.5 7V5.2h5V7"/><path d="M6.6 7l.8 11.4a1.6 1.6 0 0 0 1.6 1.4h6a1.6 1.6 0 0 0 1.6-1.4L17.4 7"/>
+{%- elif nome == 'scan' -%}<path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M18.6 3.4V6h-2.6"/>
+{%- elif nome == 'download' -%}<path d="M12 4v10"/><path d="m7.5 10 4.5 4.5 4.5-4.5"/><path d="M5 19h14"/>
+{%- elif nome == 'seta' -%}<path d="m9.5 5.5 6.5 6.5-6.5 6.5"/>
+{%- elif nome == 'voltar' -%}<path d="M19 12H5"/><path d="m10.5 6.5-5.5 5.5 5.5 5.5"/>
+{%- elif nome == 'lapis' -%}<path d="M4 15.6V20h4.4L19.2 9.2a1.7 1.7 0 0 0 0-2.4l-2-2a1.7 1.7 0 0 0-2.4 0Z"/>
+{%- elif nome == 'info' -%}<path d="M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6Z"/><path d="M12 11v5.2"/><path d="M12 8.1h.01"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}

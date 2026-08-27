@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    a { color: oklch(0.78 0.12 258); text-decoration: none; }
+    a:hover { color: oklch(0.88 0.08 258); }
+  </style>
+</helmet>
+
+<div style="width: 860px; height: 700px; display: flex; align-items: center; justify-content: center; padding: 30px; background: rgba(5, 7, 10, 0.82);">
+
+  <div style="width: 100%; border-radius: 18px; background: #0f141b; border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 24px 70px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden;">
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 24px 26px 20px; border-bottom: 1px solid rgba(255,255,255,0.07);">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <h2 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 22px; font-weight: 600; letter-spacing: -0.5px; color: #f4f8fd;">Novo grupo comparativo</h2>
+        <div style="font-size: 13px; color: #8b98a9;">Um grupo junta canais de dispositivos para comparar as curvas lado a lado.</div>
+      </div>
+      <span style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8b98a9; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"></path></svg>
+      </span>
+    </div>
+
+    <div style="flex-grow: 1; min-height: 0; padding: 22px 26px; display: flex; flex-direction: column; gap: 20px;">
+
+      <div style="display: flex; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 8px; flex-grow: 1; min-width: 0;">
+          <label style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b98a9;">Nome</label>
+          <div style="padding: 11px 13px; border-radius: 9px; font-size: 14px; color: #f2f6fb; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.14);">Cargas do Sítio</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px; width: 300px; flex-shrink: 0;">
+          <label style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b98a9;">Descrição <span style="text-transform: none; letter-spacing: 0; font-weight: 400; color: #5c6879;">opcional</span></label>
+          <div style="padding: 11px 13px; border-radius: 9px; font-size: 14px; color: #5c6879; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09);">Bomba e medidor de entrada</div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <label style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b98a9;">Escopo</label>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <sc-for list="{{escopos}}" as="e" hint-placeholder-count="2">
+            <div onClick="{{e.pick}}" style="display: flex; flex-direction: column; gap: 9px; padding: 16px 17px; border-radius: 12px; cursor: pointer; background: {{e.bg}}; border: 1px solid {{e.borda}};">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1.5px solid {{e.radioBorda}};">
+                  <span style="width: 8px; height: 8px; border-radius: 50%; background: {{e.radioPonto}};"></span>
+                </span>
+                <span style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.2px; color: {{e.fg}};">{{e.titulo}}</span>
+              </div>
+              <div style="font-size: 12.5px; line-height: 1.5; color: #8b98a9; text-wrap: pretty;">{{e.descricao}}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{mostraLocais}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 16px; border-radius: 11px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.09);">
+            <span style="font-size: 12.5px; color: #8b98a9; margin-right: 4px;">Local do grupo</span>
+            <sc-for list="{{locais}}" as="l" hint-placeholder-count="4">
+              <div onClick="{{l.pick}}" style="cursor: pointer; padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 500; background: {{l.bg}}; color: {{l.fg}}; border: 1px solid {{l.borda}};">{{l.nome}}</div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="display: flex; align-items: flex-start; gap: 11px; padding: 14px 16px; border-radius: 11px; background: {{aviso.bg}}; border: 1px solid {{aviso.borda}};">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="{{aviso.icone}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6Z"></path><path d="M12 11v5.2"></path><path d="M12 8.1h.01"></path></svg>
+        <div style="display: flex; flex-direction: column; gap: 5px; min-width: 0;">
+          <span style="font-size: 13px; font-weight: 600; color: {{aviso.tituloFg}};">{{aviso.titulo}}</span>
+          <span style="font-size: 12.5px; line-height: 1.5; color: #8b98a9; text-wrap: pretty;">{{aviso.texto}}</span>
+        </div>
+      </div>
+
+      <div style="margin-top: auto; display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #5c6879;">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M5 12.5 9.5 17 19 7.5"></path></svg>
+        O escopo pode ser trocado depois — nenhuma série é apagada quando ele muda.
+      </div>
+
+    </div>
+
+    <div style="border-top: 1px solid rgba(255,255,255,0.07); padding: 18px 26px 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: rgba(255,255,255,0.015);">
+      <span style="font-size: 12.5px; color: #6b7889;">{{resumo}}</span>
+      <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+        <div style="padding: 11px 18px; border-radius: 9px; font-size: 13.5px; font-weight: 500; cursor: pointer; color: #cbd5e2; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);">Cancelar</div>
+        <div style="padding: 11px 20px; border-radius: 9px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: #05070a; background: {{accent}};">Criar grupo</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":860,"height":700},"accent":{"editor":"color","default":"#6f9bff","options":["#6f9bff","#5ee0b8","#c084fc","#f0a868"]}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { escopo: 'local', local: 'Sítio' };
+  }
+
+  locaisDef() {
+    return ['Casa Principal', 'Sítio', 'Escritório', 'Apartamento'];
+  }
+
+  renderVals() {
+    const accent = this.props.accent ?? '#6f9bff';
+    const escopo = this.state.escopo;
+    const local = this.state.local;
+    const porLocal = escopo === 'local';
+
+    const cartao = (ativo) => ({
+      bg: ativo ? 'color-mix(in oklab, ' + accent + ' 10%, transparent)' : 'rgba(255,255,255,0.03)',
+      borda: ativo ? 'color-mix(in oklab, ' + accent + ' 34%, transparent)' : 'rgba(255,255,255,0.09)',
+      fg: ativo ? '#f2f6fb' : '#cbd5e2',
+      radioBorda: ativo ? accent : 'rgba(255,255,255,0.18)',
+      radioPonto: ativo ? accent : 'transparent'
+    });
+
+    const geral = cartao(!porLocal);
+    const doLocal = cartao(porLocal);
+
+    return {
+      accent: accent,
+      mostraLocais: porLocal,
+      escopos: [
+        {
+          titulo: 'Geral',
+          descricao: 'Aceita canais de qualquer dispositivo, de qualquer local. Bom para comparar um local com o outro.',
+          bg: geral.bg, borda: geral.borda, fg: geral.fg,
+          radioBorda: geral.radioBorda, radioPonto: geral.radioPonto,
+          pick: () => this.setState({ escopo: 'geral' })
+        },
+        {
+          titulo: 'De um local',
+          descricao: 'Só aceita dispositivos daquele local. O seletor de série já vem filtrado e o servidor recusa o resto.',
+          bg: doLocal.bg, borda: doLocal.borda, fg: doLocal.fg,
+          radioBorda: doLocal.radioBorda, radioPonto: doLocal.radioPonto,
+          pick: () => this.setState({ escopo: 'local' })
+        }
+      ],
+      locais: this.locaisDef().map((n) => {
+        const ativo = porLocal && n === local;
+        return {
+          nome: n,
+          bg: ativo ? '#f2f6fb' : 'rgba(255,255,255,0.03)',
+          fg: ativo ? '#0b0e13' : '#cbd5e2',
+          borda: ativo ? '#f2f6fb' : 'rgba(255,255,255,0.09)',
+          pick: () => this.setState({ local: n })
+        };
+      }),
+      aviso: porLocal
+        ? {
+            titulo: 'Este grupo fica preso a ' + local,
+            texto: 'Ele aparece na lista de Energia quando você filtra por ' + local + ', e o botão de adicionar série só oferece dispositivos de lá.',
+            bg: 'color-mix(in oklab, ' + accent + ' 8%, transparent)',
+            borda: 'color-mix(in oklab, ' + accent + ' 26%, transparent)',
+            icone: accent,
+            tituloFg: '#f2f6fb'
+          }
+        : {
+            titulo: 'Este grupo aparece em qualquer local',
+            texto: 'Sem escopo, nada é recusado — o cuidado com a unidade continua sendo seu: misturar W e kWh no mesmo gráfico exigiria dois eixos.',
+            bg: 'rgba(255,255,255,0.03)',
+            borda: 'rgba(255,255,255,0.09)',
+            icone: '#8b98a9',
+            tituloFg: '#cbd5e2'
+          },
+      resumo: porLocal
+        ? 'Grupo do local ' + local
+        : 'Grupo geral, sem local definido'
+    };
+  }
+}
+</script>
+</body>
+</html>

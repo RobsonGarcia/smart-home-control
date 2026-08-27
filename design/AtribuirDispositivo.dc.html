@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    * { box-sizing: border-box; }
+    a { color: oklch(0.78 0.12 258); text-decoration: none; }
+    a:hover { color: oklch(0.88 0.08 258); }
+  </style>
+</helmet>
+
+<div style="width: 860px; height: 680px; display: flex; align-items: center; justify-content: center; padding: 30px; background: rgba(5, 7, 10, 0.82);">
+
+  <div style="width: 100%; border-radius: 18px; background: #0f141b; border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 24px 70px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden;">
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 22px 26px 18px; border-bottom: 1px solid rgba(255,255,255,0.07);">
+      <div style="display: flex; align-items: center; gap: 13px; min-width: 0;">
+        <span style="width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); color: #cbd5e2;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8h11a4 4 0 0 1 0 8h-11a4 4 0 0 1 0-8Z"></path><path d="M8.8 10.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8Z"></path></svg>
+        </span>
+        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+          <h2 style="margin: 0; font-family: 'Space Grotesk', 'Segoe UI', sans-serif; font-size: 21px; font-weight: 600; letter-spacing: -0.5px; color: #f4f8fd;">Luz Quarto</h2>
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #6b7889;">
+            <span>Interruptor 2 canais</span>
+            <span style="width: 3px; height: 3px; border-radius: 50%; background: #3d4756;"></span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">192.168.0.64</span>
+            <span style="width: 3px; height: 3px; border-radius: 50%; background: #3d4756;"></span>
+            <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">bf77c0e4aa18</span>
+          </div>
+        </div>
+      </div>
+      <span style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8b98a9; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"></path></svg>
+      </span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0; flex-grow: 1; min-height: 0;">
+
+      <div style="border-right: 1px solid rgba(255,255,255,0.07); padding: 20px 22px; display: flex; flex-direction: column; gap: 13px; min-height: 0;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); color: #cbd5e2;">1</span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b98a9;">Local</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <sc-for list="{{locais}}" as="l" hint-placeholder-count="4">
+            <div onClick="{{l.pick}}" style="display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 9px; cursor: pointer; background: {{l.bg}}; border: 1px solid {{l.borda}};">
+              <span style="width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1.5px solid {{l.radioBorda}};">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: {{l.radioPonto}};"></span>
+              </span>
+              <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+                <span style="font-size: 13.5px; font-weight: 500; color: {{l.fg}};">{{l.nome}}</span>
+                <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; color: #5c6879;">{{l.meta}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 13px; min-height: 0;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); color: #cbd5e2;">2</span>
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b98a9;">Cômodo</span>
+          <span style="margin-left: auto; font-size: 11px; color: #5c6879;">{{comodoNota}}</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <sc-for list="{{comodos}}" as="c" hint-placeholder-count="4">
+            <div onClick="{{c.pick}}" style="display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 9px; cursor: pointer; background: {{c.bg}}; border: 1px solid {{c.borda}};">
+              <span style="width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1.5px solid {{c.radioBorda}};">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: {{c.radioPonto}};"></span>
+              </span>
+              <span style="font-size: 13.5px; font-weight: 500; color: {{c.fg}}; flex-grow: 1; min-width: 0;">{{c.nome}}</span>
+              <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #5c6879;">{{c.qtd}}</span>
+            </div>
+          </sc-for>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 9px; cursor: pointer; border: 1px dashed rgba(255,255,255,0.14);">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8b98a9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M12 5.5v13M5.5 12h13"></path></svg>
+            <span style="font-size: 13px; color: #8b98a9;">Criar cômodo em {{localAtual}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top: 1px solid rgba(255,255,255,0.07); padding: 18px 26px 20px; display: flex; flex-direction: column; gap: 13px; background: rgba(255,255,255,0.015);">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 11px; min-width: 0; font-size: 13px;">
+          <span style="padding: 6px 11px; border-radius: 8px; color: #8b98a9; background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.14); white-space: nowrap;">Casa Principal · Sem cômodo</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#5c6879" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M4.5 12h14"></path><path d="m13.5 6.5 6 5.5-6 5.5"></path></svg>
+          <span style="padding: 6px 11px; border-radius: 8px; font-weight: 500; white-space: nowrap; color: {{destino.fg}}; background: {{destino.bg}}; border: 1px solid {{destino.borda}};">{{destino.label}}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+          <div style="padding: 11px 18px; border-radius: 9px; font-size: 13.5px; font-weight: 500; cursor: pointer; color: #cbd5e2; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);">Cancelar</div>
+          <div style="padding: 11px 20px; border-radius: 9px; font-size: 13.5px; font-weight: 600; cursor: pointer; color: #05070a; background: {{accent}};">Salvar atribuição</div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#8b98a9" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6Z"></path><path d="M12 11v5.2"></path><path d="M12 8.1h.01"></path></svg>
+        <span style="font-size: 12.5px; line-height: 1.5; color: #8b98a9; text-wrap: pretty;">A atribuição fica só sua: escanear a rede ou reimportar o <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; color: #cbd5e2;">devices.json</span> atualiza IP, nome e categoria, mas não mexe no local nem no cômodo.</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":860,"height":680},"accent":{"editor":"color","default":"#6f9bff","options":["#6f9bff","#5ee0b8","#c084fc","#f0a868"]}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { local: 'Casa Principal', comodo: 'Quarto Casal' };
+  }
+
+  arvore() {
+    return [
+      { nome: 'Casa Principal', rede: '192.168.0.0/24',
+        comodos: [
+          { nome: 'Sala de Estar', qtd: 3 },
+          { nome: 'Cozinha', qtd: 3 },
+          { nome: 'Quarto Casal', qtd: 2 },
+          { nome: 'Área Externa', qtd: 2 }
+        ] },
+      { nome: 'Sítio', rede: '192.168.4.0/24',
+        comodos: [
+          { nome: 'Casa de Máquinas', qtd: 3 },
+          { nome: 'Varanda', qtd: 2 }
+        ] },
+      { nome: 'Escritório', rede: '192.168.9.0/24',
+        comodos: [
+          { nome: 'Sala Técnica', qtd: 3 },
+          { nome: 'Recepção', qtd: 1 }
+        ] },
+      { nome: 'Apartamento', rede: 'sem rede definida', comodos: [] }
+    ];
+  }
+
+  renderVals() {
+    const accent = this.props.accent ?? '#6f9bff';
+    const arvore = this.arvore();
+    const localAtual = this.state.local;
+    const atual = arvore.find((l) => l.nome === localAtual) || arvore[0];
+    const comodoAtual = this.state.comodo;
+
+    const selecionado = (ativo) => ({
+      bg: ativo ? 'rgba(255,255,255,0.07)' : 'transparent',
+      borda: ativo ? 'rgba(255,255,255,0.12)' : 'transparent',
+      fg: ativo ? '#f2f6fb' : '#cbd5e2',
+      radioBorda: ativo ? accent : 'rgba(255,255,255,0.18)',
+      radioPonto: ativo ? accent : 'transparent'
+    });
+
+    const escolhido = atual.comodos.some((c) => c.nome === comodoAtual);
+
+    return {
+      accent: accent,
+      localAtual: localAtual,
+      comodoNota: atual.comodos.length === 0
+        ? 'nenhum cômodo neste local'
+        : atual.comodos.length + ' em ' + localAtual,
+      locais: arvore.map((l) => {
+        const est = selecionado(l.nome === localAtual);
+        return {
+          nome: l.nome,
+          meta: l.rede + ' · ' + l.comodos.length + ' cômodos',
+          bg: est.bg, borda: est.borda, fg: est.fg,
+          radioBorda: est.radioBorda, radioPonto: est.radioPonto,
+          // Trocar de local zera o comodo: um comodo pertence a um local so.
+          pick: () => this.setState({ local: l.nome, comodo: null })
+        };
+      }),
+      comodos: atual.comodos.map((c) => {
+        const est = selecionado(c.nome === comodoAtual);
+        return {
+          nome: c.nome,
+          qtd: c.qtd + ' disp.',
+          bg: est.bg, borda: est.borda, fg: est.fg,
+          radioBorda: est.radioBorda, radioPonto: est.radioPonto,
+          pick: () => this.setState({ comodo: c.nome })
+        };
+      }),
+      destino: escolhido
+        ? {
+            label: localAtual + ' · ' + comodoAtual,
+            fg: accent,
+            bg: 'color-mix(in oklab, ' + accent + ' 14%, transparent)',
+            borda: 'color-mix(in oklab, ' + accent + ' 32%, transparent)'
+          }
+        : {
+            label: 'escolha um cômodo',
+            fg: '#6b7889',
+            bg: 'rgba(255,255,255,0.03)',
+            borda: 'rgba(255,255,255,0.09)'
+          }
+    };
+  }
+}
+</script>
+</body>
+</html>

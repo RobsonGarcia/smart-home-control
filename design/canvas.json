@@ -1,0 +1,54 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Locais e cômodos" },
+    { "id": "page-2", "name": "Energia" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Locais e cômodos — desktop", "page": "page-1", "x": 0, "y": 0, "w": 1440, "h": 1720, "is_interactive": true },
+    { "file": "Comodo.dc.html", "title": "Cômodo + sem cômodo", "page": "page-1", "x": 1560, "y": 0, "w": 1440, "h": 1060 },
+    { "file": "Locais.dc.html", "title": "Gerenciar locais e cômodos", "page": "page-1", "x": 3120, "y": 0, "w": 1440, "h": 1240 },
+    { "file": "Mobile.dc.html", "title": "Mobile — 390×844", "page": "page-1", "x": 0, "y": 1840, "w": 390, "h": 844 },
+    { "file": "Sistema.dc.html", "title": "Sistema visual", "page": "page-1", "x": 520, "y": 1840, "w": 1040, "h": 1240 },
+    { "file": "AtribuirDispositivo.dc.html", "title": "Atribuir local e cômodo", "page": "page-1", "x": 1680, "y": 1840, "w": 860, "h": 680, "is_interactive": true },
+
+    { "file": "Energia.dc.html", "title": "Energia — grupos comparativos", "page": "page-2", "x": 0, "y": 0, "w": 1440, "h": 1180, "is_interactive": true },
+    { "file": "Grupo.dc.html", "title": "Grupo — gráfico comparativo", "page": "page-2", "x": 1560, "y": 0, "w": 1440, "h": 1260, "is_interactive": true },
+    { "file": "NovoGrupo.dc.html", "title": "Novo grupo — escopo", "page": "page-2", "x": 0, "y": 1400, "w": 860, "h": 700, "is_interactive": true },
+    { "file": "AdicionarSerie.dc.html", "title": "Adicionar série", "page": "page-2", "x": 980, "y": 1400, "w": 900, "h": 764 }
+  ],
+  "annotations": [
+    {
+      "id": "note-1",
+      "page": "page-1",
+      "x": 0,
+      "y": -230,
+      "w": 620,
+      "text": "LOCAL → CÔMODO → DISPOSITIVO.\nUm local é a casa, o sítio, o escritório; os cômodos ficam dentro dele; cada dispositivo mora em um cômodo.\n\nTrês estados, três tratamentos:\nOnline = card sólido, leitura em destaque.\nOffline = card sólido, o tempo parado ocupa o lugar da leitura.\nNão monitorado = borda tracejada, tudo esmaecido, toggle desligado.\n\nO seletor de local e os filtros desta tela funcionam — clique para testar."
+    },
+    {
+      "id": "note-2",
+      "page": "page-1",
+      "x": 1560,
+      "y": -230,
+      "w": 620,
+      "text": "A tabela reusa as colunas que já existem em devices/list.html (IP, protocolo, status, intervalo, monitorar) e ganha a coluna de última leitura.\n\n\"Sem cômodo\" é a caixa de entrada do local: é onde a migração deposita todos os dispositivos que já existiam, e onde caem os que vierem de um scan novo."
+    },
+    {
+      "id": "note-4",
+      "page": "page-1",
+      "x": 3120,
+      "y": -230,
+      "w": 620,
+      "text": "O CRUD de locais e cômodos.\n\nExcluir um local só é permitido quando ele está vazio — o botão fica inerte enquanto houver dispositivos, porque as FKs não são aplicadas no SQLite e a integridade fica no código.\n\nExcluir um cômodo não apaga dispositivo nenhum: eles voltam para \"Sem cômodo\" do mesmo local."
+    },
+    {
+      "id": "note-3",
+      "page": "page-2",
+      "x": 0,
+      "y": -270,
+      "w": 700,
+      "text": "ESCOPO DO GRUPO: geral ou de um local.\nGeral aceita qualquer dispositivo. De um local só aceita os de lá — o seletor filtra e o servidor recusa o resto.\n\nSéries que ficaram fora do escopo são MARCADAS, nunca apagadas: veja \"Rack Escritório\" na tabela do grupo.\n\nPaleta categórica validada para fundo escuro: azul, laranja, verde-água, âmbar, magenta — em ordem fixa, atribuída por série e não por posição no ranking, então ocultar uma série não repinta as outras.\n\nUm grupo = uma unidade = um eixo. Sem eixo duplo.\n\nPeríodo, filtro de local e legenda funcionam — clique numa série para ocultá-la."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

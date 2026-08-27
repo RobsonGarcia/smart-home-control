@@ -1,0 +1,93 @@
+# ---------------------------------------------------------------------------
+# CREDENCIAIS E DADOS COLETADOS
+#
+# Este repositório é público. Nada aqui embaixo pode ser versionado:
+#
+#   tinytuya.json  -> API key e secret da conta Tuya Cloud (acesso pela
+#                     internet à conta inteira)
+#   devices.json   -> local_key de cada aparelho
+#   os demais JSON -> gerados pela coleta, também trazem local_key
+#   *.db           -> a tabela devices guarda os mesmos local_key
+#
+# O local_key permite controlar o aparelho para quem está na mesma rede; a
+# chave da Cloud vale de qualquer lugar.
+# ---------------------------------------------------------------------------
+
+# Credenciais Tuya
+tinytuya.json
+devices.json
+
+# JSONs de apoio da coleta
+snapshot.json
+tuya-raw.json
+dados_casa_inteligente.json
+
+# Bancos de dados, em qualquer lugar da árvore
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+data/
+
+# Backups (banco e credenciais juntos)
+backups/
+*.zip
+
+# ---------------------------------------------------------------------------
+# Artefatos gerados
+# ---------------------------------------------------------------------------
+
+# Canvas publicado: payload do editor, reconstruível a partir de
+# design/*.dc.html + design/canvas.json pelo helper do /design.
+design/painel-casas-comodos.html
+
+# ---------------------------------------------------------------------------
+# Scripts avulsos, fora do app
+# ---------------------------------------------------------------------------
+coletar.py
+consultar.py
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Ambiente virtual
+.venv
+venv/
+ENV/
+env/
+
+# Variáveis de ambiente
+.env
+.env.local
+
+# ---------------------------------------------------------------------------
+# Editores
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
