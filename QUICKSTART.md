@@ -222,6 +222,22 @@ sqlite3 data/app.db "SELECT collected_at, dps_json FROM readings WHERE device_id
 
 ---
 
+## ☀️ Energia Solar em 1 Minuto
+
+Tem inversor SolPlanet/AiSWEI? Menu **Solar → Nova integração**:
+
+1. Escolha o nível (**Comum** para conta do cloud.solplanet.net; **Pro** se
+   o fabricante te deu um token Business) e a região (**ap** para contas do
+   Brasil).
+2. Informe App Key + App Secret (perfil → *Account and security*) e, sem
+   token, o **API Key da planta** (*Plant* → detalhes).
+3. "Testar e listar plantas" → escolha a planta → **Criar**.
+
+O coletor descobre os inversores, importa 30 dias de histórico e passa a
+ler a cada 5 min — total e por canal MPPT. Os canais entram nos grupos de
+energia como qualquer tomada Tuya. Detalhes no README; fabricante novo em
+`docs/NOVO_FABRICANTE_SOLAR.md`.
+
 ## 📊 Próximos Passos
 
 ### Entender melhor a arquitetura

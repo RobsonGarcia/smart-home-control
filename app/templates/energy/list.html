@@ -70,7 +70,7 @@
         <div class="group-actions">
             <a href="/energy/{{ group.id }}" class="btn btn-primary">Abrir</a>
             <button class="btn btn-danger btn-icon" title="Excluir grupo"
-                    onclick="excluirGrupo({{ group.id }}, {{ group.name|tojson }})">
+                    onclick='excluirGrupo({{ group.id }}, {{ group.name|tojson }})'>
                 {{ m.icone_svg('lixeira', 14) }}
             </button>
         </div>
@@ -216,7 +216,8 @@ async function criarGrupo(ev) {
 }
 
 async function excluirGrupo(id, nome) {
-    if (!confirm('Excluir o grupo "' + nome + '" e todas as suas séries?')) return;
+    if (!(await confirmar('Excluir o grupo "' + nome + '" e todas as suas séries?',
+                          { titulo: 'Excluir grupo', rotulo: 'Excluir', perigo: true }))) return;
     await executar(() => apiDelete('/energy/' + id), 'Grupo excluído', () => recarregar());
 }
 </script>

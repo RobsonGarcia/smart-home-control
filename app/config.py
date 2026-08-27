@@ -20,5 +20,11 @@ ONLINE_WINDOW_MINUTES = 5
 # local, ate serem atribuidos.
 DEFAULT_LOCAL_NAME = "Local Principal"
 
+# Energia solar. O equipamento gera telemetria a cada ~5 min; polling mais
+# rapido so queima requisicao (o coletor deduplica pelo tmstp de qualquer
+# forma). O backfill puxa o historico da cloud ao configurar um inversor.
+SOLAR_POLL_INTERVAL_SECONDS = 300
+SOLAR_BACKFILL_DIAS = 30
+
 DEVICES_JSON_PATH = BASE_DIR / "devices.json"
 SNAPSHOT_JSON_PATH = BASE_DIR / "snapshot.json"

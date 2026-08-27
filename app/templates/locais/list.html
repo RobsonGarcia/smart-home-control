@@ -64,13 +64,13 @@
 
         {% if g.local.id %}
         <div class="controls" style="margin: 0;">
-            <button class="btn btn-small" onclick="renomearLocal({{ g.local.id }}, {{ g.local.nome|tojson }})">
+            <button class="btn btn-small" onclick='renomearLocal({{ g.local.id }}, {{ g.local.nome|tojson }})'>
                 {{ m.icone_svg('lapis', 14) }} Renomear
             </button>
             {% set vazio = g.total_devices == 0 and g.comodos|length == 0 %}
             <button class="btn btn-small btn-danger {% if not vazio %}is-disabled{% endif %}"
                     {% if not vazio %}title="Mova os {{ g.total_devices }} dispositivos e apague os {{ g.comodos|length }} cômodos antes de excluir"{% endif %}
-                    onclick="excluirLocal({{ g.local.id }}, {{ g.local.nome|tojson }})">
+                    onclick='excluirLocal({{ g.local.id }}, {{ g.local.nome|tojson }})'>
                 {{ m.icone_svg('lixeira', 14) }} Excluir
             </button>
         </div>
@@ -92,7 +92,7 @@
         {% endfor %}
 
         {% if g.local.id %}
-        <button class="comodo-novo" onclick="novoComodo({{ g.local.id }}, {{ g.local.nome|tojson }})">
+        <button class="comodo-novo" onclick='novoComodo({{ g.local.id }}, {{ g.local.nome|tojson }})'>
             {{ m.icone_svg('mais', 14) }} Novo cômodo
         </button>
         {% endif %}
@@ -173,7 +173,9 @@ async function criarLocal(ev) {
 }
 
 async function novoComodo(localId, localNome) {
-    const nome = prompt('Novo cômodo em ' + localNome + ':');
+    const nome = await pedirTexto('Novo cômodo em ' + localNome + ':',
+                                  { titulo: 'Novo cômodo', rotulo: 'Criar',
+                                    placeholder: 'ex: Cozinha' });
     if (!nome) return;
     await executar(
         () => apiPost('/locais/' + localId + '/comodos', { nome: nome }),
@@ -182,7 +184,8 @@ async function novoComodo(localId, localNome) {
 }
 
 async function renomearLocal(localId, atual) {
-    const nome = prompt('Novo nome do local:', atual);
+    const nome = await pedirTexto('Novo nome do local:',
+                                  { titulo: 'Renomear local', valor: atual });
     if (!nome || nome === atual) return;
     await executar(
         () => apiPut('/locais/' + localId, { nome: nome }),
@@ -191,7 +194,8 @@ async function renomearLocal(localId, atual) {
 }
 
 async function excluirLocal(localId, nome) {
-    if (!confirm('Excluir o local "' + nome + '"?')) return;
+    if (!(await confirmar('Excluir o local "' + nome + '"?',
+                          { titulo: 'Excluir local', rotulo: 'Excluir', perigo: true }))) return;
     await executar(
         () => apiDelete('/locais/' + localId),
         'Local excluído', () => recarregar()

@@ -17,6 +17,9 @@
 tinytuya.json
 devices.json
 
+# Credenciais da API do inversor solar (sonda/configurador)
+solar.local.json
+
 # JSONs de apoio da coleta
 snapshot.json
 tuya-raw.json

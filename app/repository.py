@@ -6,6 +6,7 @@ from app.config import (
     DEFAULT_LOCAL_NAME,
     DEFAULT_POLL_INTERVAL_SECONDS,
     ONLINE_WINDOW_MINUTES,
+    SOLAR_POLL_INTERVAL_SECONDS,
 )
 from app.db import get_db
 from app.errors import ConflictError, NotFoundError, ValidationError
@@ -90,14 +91,28 @@ def get_all_devices() -> List[Dict]:
         return [dict(row) for row in cursor.fetchall()]
 
 
-def insert_reading(device_id: str, dps_json: str, online: bool) -> None:
-    """Insere uma leitura de status do dispositivo."""
+def insert_reading(device_id: str, dps_json: str, online: bool,
+                   collected_at: str = None) -> None:
+    """
+    Insere uma leitura de status do dispositivo.
+
+    `collected_at` ("YYYY-MM-DD HH:MM:SS", UTC) é o instante da MEDIÇÃO,
+    quando ele é conhecido — o coletor solar grava o tmstp do equipamento,
+    senão o backfill nasceria com todos os pontos amontoados no "agora".
+    Sem ele, vale o relógio do banco (coleta Tuya em tempo real).
+    """
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO readings (device_id, dps_json, online, collected_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-        """, (device_id, dps_json, 1 if online else 0))
+        if collected_at is None:
+            cursor.execute("""
+                INSERT INTO readings (device_id, dps_json, online, collected_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            """, (device_id, dps_json, 1 if online else 0))
+        else:
+            cursor.execute("""
+                INSERT INTO readings (device_id, dps_json, online, collected_at)
+                VALUES (?, ?, ?, ?)
+            """, (device_id, dps_json, 1 if online else 0, collected_at))
 
 
 def get_latest_reading(device_id: str) -> Optional[Dict]:
@@ -191,13 +206,20 @@ def get_all_monitor_configs() -> List[Dict]:
     """Retorna todas as configurações de monitoramento."""
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM monitor_configs WHERE enabled = 1")
+        # O source do device decide QUAL coletor roda (tinytuya x driver
+        # solar); o JOIN também descarta configs órfãs de devices apagados.
+        cursor.execute("""
+            SELECT mc.*, COALESCE(d.source, 'cloud') AS source
+            FROM monitor_configs mc
+            JOIN devices d ON d.id = mc.device_id
+            WHERE mc.enabled = 1
+        """)
         return [dict(row) for row in cursor.fetchall()]
 
 
 def get_device_status(device_id: str) -> Optional[Dict]:
     """Status de um device. Wrapper de _query_device_statuses (1 query)."""
-    linhas = _query_device_statuses(device_id=device_id)
+    linhas = _query_device_statuses(device_id=device_id, incluir_solar=True)
     return linhas[0] if linhas else None
 
 
@@ -611,7 +633,9 @@ _SQL_STATUS = """
            r.dps_json     AS rd_dps_json,
            r.online       AS rd_online,
            CASE WHEN r.online = 1
-                 AND r.collected_at >= datetime('now', ?)
+                 AND r.collected_at >= datetime('now',
+                     '-' || MAX(?, COALESCE(mc.poll_interval_seconds, 0) * 2)
+                         || ' seconds')
                 THEN 1 ELSE 0 END AS is_online
     FROM devices d
     LEFT JOIN locais  l ON l.id = d.local_id
@@ -623,7 +647,8 @@ _SQL_STATUS = """
         ORDER BY r2.collected_at DESC, r2.id DESC
         LIMIT 1
     )
-    WHERE (? IS NULL OR d.id = ?)
+    WHERE (? = 1 OR COALESCE(d.source, 'cloud') != 'solar')
+      AND (? IS NULL OR d.id = ?)
       AND (? IS NULL OR d.local_id = ?)
       AND (? IS NULL OR d.comodo_id = ?)
     ORDER BY l.sort_order, l.nome COLLATE NOCASE,
@@ -641,7 +666,8 @@ _COLUNAS_EXTRA = (
 
 
 def _query_device_statuses(device_id: str = None, local_id: int = None,
-                           comodo_id: int = None) -> List[Dict]:
+                           comodo_id: int = None,
+                           incluir_solar: bool = False) -> List[Dict]:
     """
     Devices + último reading + monitor config + local/cômodo, numa query.
 
@@ -651,8 +677,15 @@ def _query_device_statuses(device_id: str = None, local_id: int = None,
     gravou collected_at — os dois em UTC. Comparar com datetime.now() do
     Python, como antes, dava diferença negativa em fuso a oeste de Greenwich
     e fazia tudo passar por online.
+
+    A janela de online é POR DISPOSITIVO: o maior entre ONLINE_WINDOW_MINUTES
+    e 2x o intervalo de polling. Com a janela fixa de 5 min, um inversor
+    solar coletado a cada 5 min "piscaria" offline entre uma leitura e outra.
+
+    Inversores solares só entram com incluir_solar=True — eles moram na seção
+    /solar, não nas telas de dispositivos e locais.
     """
-    janela = '-%d minutes' % ONLINE_WINDOW_MINUTES
+    janela_segundos = ONLINE_WINDOW_MINUTES * 60
     with get_db() as conn:
         # Dispositivos importados antes desta versão podem não ter config.
         # INSERT OR IGNORE + PK em device_id torna isso no-op depois da 1a vez.
@@ -663,7 +696,8 @@ def _query_device_statuses(device_id: str = None, local_id: int = None,
         """, (DEFAULT_POLL_INTERVAL_SECONDS,))
 
         rows = conn.execute(_SQL_STATUS, (
-            janela,
+            janela_segundos,
+            1 if incluir_solar else 0,
             device_id, device_id,
             local_id, local_id,
             comodo_id, comodo_id,
@@ -709,9 +743,10 @@ def _query_device_statuses(device_id: str = None, local_id: int = None,
     return resultado
 
 
-def get_all_device_statuses(local_id: int = None,
-                            comodo_id: int = None) -> List[Dict]:
-    return _query_device_statuses(local_id=local_id, comodo_id=comodo_id)
+def get_all_device_statuses(local_id: int = None, comodo_id: int = None,
+                            incluir_solar: bool = False) -> List[Dict]:
+    return _query_device_statuses(local_id=local_id, comodo_id=comodo_id,
+                                  incluir_solar=incluir_solar)
 
 
 def get_devices_grouped_by_local(local_id: int = None) -> List[Dict]:
@@ -861,7 +896,10 @@ def get_devices_for_group_scope(group_id: int) -> List[Dict]:
             raise NotFoundError("Grupo %s não encontrado" % group_id)
         escopo = grupo['scope_local_id']
 
-    return _query_device_statuses(local_id=escopo)
+    # incluir_solar: os canais do inversor são exatamente o tipo de série que
+    # um grupo de energia compara — a exclusão das telas de dispositivos não
+    # vale aqui.
+    return _query_device_statuses(local_id=escopo, incluir_solar=True)
 
 
 def device_is_in_scope(group_id: int, device_id: str) -> bool:
@@ -878,3 +916,281 @@ def device_is_in_scope(group_id: int, device_id: str) -> bool:
         if device is None:
             raise NotFoundError("Dispositivo %s não encontrado" % device_id)
         return device['local_id'] == grupo['scope_local_id']
+
+# ---------------------------------------------------------------------------
+# Energia solar: integrações e inversores
+#
+# Uma integração é uma conta/planta num fabricante (driver em app/solar/).
+# O inversor é uma linha comum em devices (source='solar') — é o que faz
+# grupos de energia, gráficos e is_online funcionarem de graça — e
+# solar_inversores guarda só o vínculo com a integração e o serial na API.
+#
+# credenciais_json circula por aqui porque o coletor precisa dele. As ROTAS
+# é que nunca podem devolvê-lo — e ninguém pode logá-lo.
+# ---------------------------------------------------------------------------
+
+def get_solar_integracoes() -> List[Dict]:
+    """Todas as integrações, com a contagem de inversores de cada uma."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT i.*, COUNT(si.device_id) AS total_inversores
+            FROM solar_integracoes i
+            LEFT JOIN solar_inversores si ON si.integracao_id = i.id
+            GROUP BY i.id
+            ORDER BY i.nome COLLATE NOCASE
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_solar_integracao(integracao_id: int) -> Dict:
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM solar_integracoes WHERE id = ?",
+                           (integracao_id,)).fetchone()
+        if row is None:
+            raise NotFoundError("Integração solar %s não encontrada"
+                                % integracao_id)
+        return dict(row)
+
+
+def create_solar_integracao(driver: str, nome: str, credenciais_json: str,
+                            planta_apikey: str = None,
+                            planta_nome: str = None,
+                            local_id: int = None,
+                            poll_interval_seconds: int =
+                                SOLAR_POLL_INTERVAL_SECONDS,
+                            nivel_acesso: str = "pro") -> int:
+    """
+    Os parâmetros de coleta (local, intervalo) são DA INTEGRAÇÃO — os
+    inversores herdam deles no discover. Pode haver quantas integrações do
+    mesmo fabricante se quiser (duas contas, duas plantas); o que é recusado
+    é a MESMA planta duas vezes, que duplicaria toda leitura.
+    """
+    nome = (nome or "").strip()
+    if not nome:
+        raise ValidationError("Informe um nome para a integração")
+    with get_db() as conn:
+        if planta_apikey:
+            ja_existe = conn.execute(
+                "SELECT 1 FROM solar_integracoes WHERE driver = ?"
+                " AND planta_apikey = ?", (driver, planta_apikey)).fetchone()
+            if ja_existe:
+                raise ConflictError(
+                    "Esta planta já está configurada em outra integração")
+        cur = conn.execute("""
+            INSERT INTO solar_integracoes
+                (driver, nome, credenciais_json, planta_apikey, planta_nome,
+                 local_id, poll_interval_seconds, nivel_acesso)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (driver, nome, credenciais_json, planta_apikey, planta_nome,
+              local_id, max(60, int(poll_interval_seconds or
+                                    SOLAR_POLL_INTERVAL_SECONDS)),
+              (nivel_acesso or "pro").strip().lower()))
+        return cur.lastrowid
+
+
+def update_solar_integracao(integracao_id: int, nome: str = None,
+                            enabled: bool = None,
+                            local_id: int = _NAO_INFORMADO,
+                            poll_interval_seconds: int = None) -> None:
+    get_solar_integracao(integracao_id)
+    with get_db() as conn:
+        if local_id is not _NAO_INFORMADO:
+            conn.execute("UPDATE solar_integracoes SET local_id = ?,"
+                         " updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                         (local_id, integracao_id))
+            # Os inversores acompanham o local da integração.
+            conn.execute("""
+                UPDATE devices SET local_id = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id IN (SELECT device_id FROM solar_inversores
+                             WHERE integracao_id = ?)
+            """, (local_id, integracao_id))
+        if poll_interval_seconds is not None:
+            intervalo = max(60, int(poll_interval_seconds))
+            conn.execute("UPDATE solar_integracoes SET poll_interval_seconds"
+                         " = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                         (intervalo, integracao_id))
+            conn.execute("""
+                UPDATE monitor_configs SET poll_interval_seconds = ?,
+                       updated_at = CURRENT_TIMESTAMP
+                WHERE device_id IN (SELECT device_id FROM solar_inversores
+                                    WHERE integracao_id = ?)
+            """, (intervalo, integracao_id))
+        if nome is not None:
+            nome = nome.strip()
+            if not nome:
+                raise ValidationError("O nome da integração não pode ser vazio")
+            conn.execute("UPDATE solar_integracoes SET nome = ?,"
+                         " updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                         (nome, integracao_id))
+        if enabled is not None:
+            conn.execute("UPDATE solar_integracoes SET enabled = ?,"
+                         " updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                         (1 if enabled else 0, integracao_id))
+            # Liga/desliga a coleta de todos os inversores da integração de
+            # uma vez — é o toggle da integração, não o de cada aparelho.
+            conn.execute("""
+                UPDATE monitor_configs SET enabled = ?,
+                       updated_at = CURRENT_TIMESTAMP
+                WHERE device_id IN
+                    (SELECT device_id FROM solar_inversores
+                     WHERE integracao_id = ?)
+            """, (1 if enabled else 0, integracao_id))
+
+
+def delete_solar_integracao(integracao_id: int) -> Dict:
+    """
+    Remove a integração e TUDO dos inversores dela: devices, configs,
+    leituras. As séries de grupos de energia que apontavam para eles ficam —
+    marcadas como device_missing, o mesmo tratamento de qualquer device
+    apagado (nunca apagar série dos outros por efeito colateral).
+    """
+    get_solar_integracao(integracao_id)
+    with get_db() as conn:
+        ids = [r["device_id"] for r in conn.execute(
+            "SELECT device_id FROM solar_inversores WHERE integracao_id = ?",
+            (integracao_id,))]
+        for device_id in ids:
+            conn.execute("DELETE FROM readings WHERE device_id = ?", (device_id,))
+            conn.execute("DELETE FROM monitor_configs WHERE device_id = ?",
+                         (device_id,))
+            conn.execute("DELETE FROM devices WHERE id = ?", (device_id,))
+        conn.execute("DELETE FROM solar_inversores WHERE integracao_id = ?",
+                     (integracao_id,))
+        conn.execute("DELETE FROM solar_integracoes WHERE id = ?",
+                     (integracao_id,))
+        return {"inversores_removidos": len(ids)}
+
+
+def criar_inversor_solar(integracao_id: int, sn: str, nome: str = None,
+                         mapping_json: str = None, psn: str = "") -> str:
+    """
+    Materializa um inversor descoberto: device + monitor_config + vínculo.
+    Local e intervalo vêm DA INTEGRAÇÃO — são parâmetros dela.
+
+    Idempotente por sn — o re-discover atualiza mapping/psn sem tocar em
+    nome, local e intervalo já existentes, que são escolhas do usuário. O
+    monitor_config nasce AQUI com o intervalo certo, antes que o auto-enroll
+    de _query_device_statuses crie um com o default de 60 s.
+    """
+    integracao = get_solar_integracao(integracao_id)
+    local_id = integracao.get("local_id")
+    poll_interval = (integracao.get("poll_interval_seconds")
+                     or SOLAR_POLL_INTERVAL_SECONDS)
+    sn = (sn or "").strip()
+    if not sn:
+        raise ValidationError("Inversor sem número de série")
+    # O id é prefixado pelo DRIVER, não pelo fabricante comercial: duas
+    # integrações do mesmo fabricante não colidem porque o sn é único.
+    device_id = "%s-%s" % (integracao["driver"], sn)
+
+    with get_db() as conn:
+        conn.execute("""
+            INSERT INTO devices
+                (id, name, local_key, category, product_name, mapping_json,
+                 ip, local_id, source, last_seen_at)
+            VALUES (?, ?, NULL, 'solar', ?, ?, NULL, ?, 'solar',
+                    CURRENT_TIMESTAMP)
+            ON CONFLICT(id) DO UPDATE SET
+                mapping_json = excluded.mapping_json,
+                last_seen_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+        """, (device_id, (nome or "").strip() or "Inversor %s" % sn,
+              integracao["nome"], mapping_json, local_id))
+        conn.execute("""
+            INSERT OR IGNORE INTO monitor_configs
+                (device_id, enabled, poll_interval_seconds)
+            VALUES (?, 1, ?)
+        """, (device_id, poll_interval))
+        conn.execute("""
+            INSERT INTO solar_inversores (device_id, integracao_id, sn, psn)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(device_id) DO UPDATE SET psn = excluded.psn
+        """, (device_id, integracao_id, sn, psn or ""))
+    return device_id
+
+
+def get_solar_inversores(integracao_id: int = None) -> List[Dict]:
+    """Vínculos inversor/integração (sem status — ver rota /solar)."""
+    with get_db() as conn:
+        sql = """
+            SELECT si.*, i.driver, i.nome AS integracao_nome
+            FROM solar_inversores si
+            JOIN solar_integracoes i ON i.id = si.integracao_id
+        """
+        params = ()
+        if integracao_id is not None:
+            sql += " WHERE si.integracao_id = ?"
+            params = (integracao_id,)
+        return [dict(r) for r in conn.execute(sql + " ORDER BY si.sn", params)]
+
+
+def get_config_coleta_solar(device_id: str) -> Optional[Dict]:
+    """O que o coletor precisa para ler um inversor: driver + credenciais."""
+    with get_db() as conn:
+        row = conn.execute("""
+            SELECT si.sn, si.integracao_id, i.driver, i.credenciais_json,
+                   i.planta_apikey, i.nivel_acesso, i.enabled
+            FROM solar_inversores si
+            JOIN solar_integracoes i ON i.id = si.integracao_id
+            WHERE si.device_id = ?
+        """, (device_id,)).fetchone()
+        return dict(row) if row else None
+
+
+def get_integracoes_backfill_pendente() -> List[Dict]:
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT * FROM solar_integracoes
+            WHERE enabled = 1 AND backfill_feito = 0
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def marcar_backfill_feito(integracao_id: int) -> None:
+    with get_db() as conn:
+        conn.execute("UPDATE solar_integracoes SET backfill_feito = 1,"
+                     " updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                     (integracao_id,))
+
+
+def tmstps_do_device(device_id: str) -> set:
+    """
+    Todos os tmstp já gravados de um inversor. O backfill roda de novo se
+    falhar no meio (só marca backfill_feito no fim) — sem este conjunto, a
+    segunda passada duplicaria os pontos que a primeira já gravou.
+    """
+    saida = set()
+    with get_db() as conn:
+        for row in conn.execute(
+                "SELECT dps_json FROM readings WHERE device_id = ?"
+                " AND online = 1", (device_id,)):
+            try:
+                tmstp = json.loads(row["dps_json"]).get("tmstp")
+                if tmstp is not None:
+                    saida.add(int(tmstp))
+            except (ValueError, TypeError):
+                continue
+    return saida
+
+
+def ultima_leitura_tmstp(device_id: str) -> Optional[int]:
+    """
+    O tmstp (epoch ms do equipamento) da última leitura solar — o coletor
+    compara com o da telemetria nova e pula a gravação se for o mesmo:
+    polling de 5 em 5 min num equipamento que mede de 5 em 5 min encosta na
+    mesma medição duas vezes com frequência.
+    """
+    with get_db() as conn:
+        row = conn.execute("""
+            SELECT dps_json FROM readings
+            WHERE device_id = ? AND online = 1
+            ORDER BY collected_at DESC, id DESC LIMIT 1
+        """, (device_id,)).fetchone()
+    if row is None:
+        return None
+    try:
+        tmstp = json.loads(row["dps_json"]).get("tmstp")
+        return int(tmstp) if tmstp is not None else None
+    except (ValueError, TypeError):
+        return None
+

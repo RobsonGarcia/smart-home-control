@@ -97,7 +97,7 @@
             <td class="num" data-col="max">—</td>
             <td style="text-align: right;">
                 <button class="btn btn-small btn-danger btn-icon" title="Remover série"
-                        onclick="removerSerie({{ s.id }}, {{ s.label|tojson }})">
+                        onclick='removerSerie({{ s.id }}, {{ s.label|tojson }})'>
                     {{ m.icone_svg('lixeira', 14) }}
                 </button>
             </td>
@@ -429,7 +429,8 @@ async function adicionarSerie(ev) {
 }
 
 async function removerSerie(id, label) {
-    if (!confirm('Remover a série "' + label + '"?')) return;
+    if (!(await confirmar('Remover a série "' + label + '"? O canal continua\ndisponível para adicionar de novo.',
+                          { titulo: 'Remover série', rotulo: 'Remover', perigo: true }))) return;
     await executar(() => apiDelete('/energy/' + GRUPO_ID + '/series/' + id),
                    'Série removida', () => recarregar());
 }

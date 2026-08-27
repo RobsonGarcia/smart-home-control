@@ -8,17 +8,17 @@ O sistema é composto por **três camadas independentes**:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Painel Web (FastAPI)                  │
+│                    Painel Web (FastAPI)                 │
 │  HTML Rendering + API JSON (routes/devices, energy)     │
 └──────────────────┬──────────────────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────────────────┐
-│              Repository (CRUD)                           │
+│              Repository (CRUD)                          │
 │     Abstração de acesso ao banco (repository.py)        │
 └──────────────────┬──────────────────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────────────────┐
-│              SQLite (data/app.db)                        │
+│              SQLite (data/app.db)                       │
 │ devices | readings | monitor_configs | comparison_groups│
 └─────────────────────────────────────────────────────────┘
 
@@ -250,6 +250,52 @@ collect_device_status(device_id)
 - Mesmo `set_version()`, `set_socketTimeout(3)`, `set_socketPersistent(True)`
 - Mesma estratégia de tratamento de exceção (log + insert com online=False)
 - Mesmo timeout curto (3s) — não bloqueia otros jobs
+
+## ☀️ Fontes de energia solar
+
+A coleta solar é uma **segunda fonte de dados** ao lado do tinytuya, atrás de
+uma abstração por fabricante:
+
+```
+app/solar/
+  base.py       CANAIS_SOLAR (vocabulário canônico) + interface FonteSolar
+  solplanet.py  driver AiSWEI: assinatura do gateway, escala, MAPA_CANAIS
+  __init__.py   DRIVERS = {"solplanet": SolPlanetDriver}
+```
+
+Princípios:
+
+- **O inversor é uma linha comum em `devices`** (`source='solar'`,
+  `local_key` NULL): status, grupos de energia e gráficos funcionam sem
+  bifurcação. A tabela `solar_integracoes` guarda a conta/planta (com os
+  parâmetros de coleta: local e intervalo) e `solar_inversores` liga o device
+  à integração.
+- **Nomenclatura do fabricante não sai do driver.** Cada driver traduz seus
+  campos para os códigos canônicos de `CANAIS_SOLAR` (ex.: AiSWEI `i1` ×0.01
+  → `corrente_mppt_1` em ampères). Fabricante novo = driver novo +
+  `MAPA_CANAIS`; grandeza inédita = uma linha nova em `CANAIS_SOLAR`.
+- **O coletor despacha por `devices.source`**: `collect_device_status`
+  (tinytuya) ou `collect_solar_status` (driver cloud). A leitura solar é
+  gravada com o `collected_at` do EQUIPAMENTO (tmstp) e deduplicada — o
+  inversor mede a cada ~5 min, independente do polling. O backfill de
+  30 dias roda no coletor, nunca no request web.
+- **Apresentação separada**: `source='solar'` fica fora das telas de
+  dispositivos/locais (filtro `incluir_solar` no repository) e mora em
+  `/solar`; só o seletor de série dos grupos de energia enxerga tudo.
+- **Níveis de acesso com capacidades**: o driver declara, por nível
+  (`niveis_acesso`), o que a conta consegue fornecer — `plantas`,
+  `inversores`, `telemetria`, `canais`, `historico`, `resumo`. A flag
+  `nivel_acesso` mora na integração; configurador, telas e coletor se
+  limitam sozinhos ao que o nível tem (backfill de um nível sem histórico é
+  marcado como feito, resumo some da tela, etc.).
+- **Tempo é responsabilidade do driver**: `Telemetria.tmstp_ms` é epoch UTC
+  REAL da medição (a AiSWEI, por exemplo, grava a hora local da planta como
+  se fosse UTC+8 — o driver corrige). O coletor grava a leitura com esse
+  instante em `collected_at` e deduplica pelo `tmstp`; os gráficos convertem
+  UTC → hora local do navegador em um ponto único (`datasetDeSerie`).
+
+O passo a passo para adicionar um fabricante está em
+[docs/NOVO_FABRICANTE_SOLAR.md](docs/NOVO_FABRICANTE_SOLAR.md).
 
 ## 🌐 Fluxo Web
 

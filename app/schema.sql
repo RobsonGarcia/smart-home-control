@@ -29,7 +29,8 @@ CREATE INDEX IF NOT EXISTS idx_comodos_local
 CREATE TABLE IF NOT EXISTS devices (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     name TEXT NOT NULL,
-    local_key TEXT NOT NULL,
+    -- NULL para fontes sem chave Tuya (inversores solares).
+    local_key TEXT,
     category TEXT,
     product_name TEXT,
     model TEXT,
@@ -43,11 +44,47 @@ CREATE TABLE IF NOT EXISTS devices (
     -- sao de sub-dispositivos Tuya. Nunca sobrescrita por scan/reimportacao.
     local_id INTEGER REFERENCES locais(id),
     comodo_id INTEGER REFERENCES comodos(id),
-    source TEXT DEFAULT 'cloud' CHECK(source IN ('cloud', 'broadcast')),
+    source TEXT DEFAULT 'cloud' CHECK(source IN ('cloud', 'broadcast', 'solar')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(id)
 );
+
+-- Integracoes de energia solar: uma linha = uma conta/planta num fabricante
+-- (driver em app/solar/). Credenciais ficam no banco de proposito -- o *.db e
+-- gitignorado -- e NUNCA podem aparecer em log ou resposta de API.
+CREATE TABLE IF NOT EXISTS solar_integracoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    driver TEXT NOT NULL,
+    nome TEXT NOT NULL,
+    credenciais_json TEXT NOT NULL,
+    planta_apikey TEXT,
+    planta_nome TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    backfill_feito INTEGER NOT NULL DEFAULT 0,
+    -- Nivel de acesso da conta no fabricante (ex.: AiSWEI 'pro' x 'comum').
+    -- O driver declara as capacidades de cada nivel e o resto se limita.
+    nivel_acesso TEXT NOT NULL DEFAULT 'pro',
+    -- Parametros de coleta definidos NA integracao: os inversores herdam o
+    -- local e o intervalo dela ao serem descobertos (e re-descobertos).
+    local_id INTEGER REFERENCES locais(id),
+    poll_interval_seconds INTEGER NOT NULL DEFAULT 300,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Vinculo inversor -> integracao. O inversor em si e uma linha em devices
+-- (source = 'solar'); aqui fica so o que e especifico da coleta cloud.
+CREATE TABLE IF NOT EXISTS solar_inversores (
+    device_id TEXT PRIMARY KEY,
+    integracao_id INTEGER NOT NULL REFERENCES solar_integracoes(id),
+    sn TEXT NOT NULL UNIQUE,
+    psn TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_solar_inversores_integracao
+    ON solar_inversores(integracao_id);
 
 -- Log de descobertas de rede
 CREATE TABLE IF NOT EXISTS discovery_log (

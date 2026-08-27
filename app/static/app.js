@@ -120,6 +120,107 @@ document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape') fecharTodosModais();
 });
 
+/* ------------------------------------------------------------- diálogos */
+
+/*
+ * confirm()/prompt() nativos destoam do painel, travam a página e nem
+ * aparecem em alguns navegadores embutidos. Estes dois usam o MESMO modal
+ * das telas e devolvem Promises:
+ *
+ *   if (!(await confirmar('Excluir o grupo?', { perigo: true }))) return;
+ *   const nome = await pedirTexto('Novo nome do local:', { valor: atual });
+ *
+ * Cancelar (botão, Esc ou clique fora) resolve false/null — os handlers
+ * globais de modal continuam valendo.
+ */
+
+function _dialogo() {
+    let m = document.getElementById('dialogoPainel');
+    if (m) return m;
+    m = document.createElement('div');
+    m.id = 'dialogoPainel';
+    m.className = 'modal';
+    m.innerHTML =
+        '<div class="modal-content" style="max-width: 460px;">' +
+        '  <div class="modal-head">' +
+        '    <div><h2 data-d="titulo"></h2><div class="sub" data-d="mensagem"></div></div>' +
+        '    <span class="close" data-d="cancelar">&times;</span>' +
+        '  </div>' +
+        '  <div class="modal-body" data-d="corpo" style="display: none;">' +
+        '    <div class="campo"><input type="text" data-d="entrada" autocomplete="off"></div>' +
+        '  </div>' +
+        '  <div class="modal-foot">' +
+        '    <button type="button" class="btn" data-d="cancelar">Cancelar</button>' +
+        '    <button type="button" class="btn btn-primary" data-d="ok"></button>' +
+        '  </div>' +
+        '</div>';
+    document.body.appendChild(m);
+    return m;
+}
+
+function _abrirDialogo(mensagem, opcoes, comEntrada) {
+    const o = opcoes || {};
+    const m = _dialogo();
+    const el = (papel) => m.querySelector('[data-d="' + papel + '"]');
+
+    el('titulo').textContent = o.titulo || (comEntrada ? 'Informe' : 'Confirmar');
+    el('mensagem').textContent = mensagem || '';
+    el('corpo').style.display = comEntrada ? '' : 'none';
+
+    const ok = el('ok');
+    ok.textContent = o.rotulo || (comEntrada ? 'Salvar' : 'Confirmar');
+    ok.classList.toggle('btn-danger', !!o.perigo);
+    ok.classList.toggle('btn-primary', !o.perigo);
+
+    const entrada = el('entrada');
+    entrada.value = o.valor || '';
+    entrada.placeholder = o.placeholder || '';
+
+    m.classList.add('is-open');
+    (comEntrada ? entrada : ok).focus();
+    if (comEntrada) entrada.select();
+
+    return new Promise((resolve) => {
+        const cancelado = comEntrada ? null : false;
+        let vivo = true;
+        const fim = (valor) => {
+            if (!vivo) return;
+            vivo = false;
+            m.classList.remove('is-open');
+            m.removeEventListener('click', aoClicar);
+            document.removeEventListener('keydown', aoTeclar, true);
+            resolve(valor);
+        };
+        const aoClicar = (ev) => {
+            const papel = ev.target.dataset && ev.target.dataset.d;
+            if (papel === 'ok') {
+                fim(comEntrada ? entrada.value.trim() : true);
+            } else if (papel === 'cancelar' || ev.target === m) {
+                fim(cancelado);
+            }
+        };
+        const aoTeclar = (ev) => {
+            if (ev.key === 'Escape') fim(cancelado);
+            if (ev.key === 'Enter' && (!comEntrada || ev.target === entrada)) {
+                ev.preventDefault();
+                fim(comEntrada ? entrada.value.trim() : true);
+            }
+        };
+        m.addEventListener('click', aoClicar);
+        // capture: chega antes do fechador global de Esc, que só remove a
+        // classe — sem isto a Promise ficaria pendurada para sempre.
+        document.addEventListener('keydown', aoTeclar, true);
+    });
+}
+
+function confirmar(mensagem, opcoes) {
+    return _abrirDialogo(mensagem, opcoes, false);
+}
+
+function pedirTexto(mensagem, opcoes) {
+    return _abrirDialogo(mensagem, opcoes, true);
+}
+
 /* ------------------------------------------------------- cores de séries */
 
 /**
@@ -243,10 +344,20 @@ function configGraficoLinha(datasets, opcoes) {
 }
 
 /** Marca fina, ponto discreto, sem preenchimento — o traçado é o dado. */
+// collected_at vem do banco em UTC sem sufixo ("YYYY-MM-DD HH:MM:SS") — o
+// adapter de datas trataria como hora LOCAL e a curva inteira deslocaria o
+// fuso (3 h no Brasil). A conversão acontece aqui, no único ponto por onde
+// todo dataset passa.
+function dataUtc(timestamp) {
+    return new Date(timestamp.replace(' ', 'T') + 'Z');
+}
+
 function datasetDeSerie(rotulo, pontos, cor) {
     return {
         label: rotulo,
-        data: pontos,
+        data: pontos.map((p) => (
+            typeof p.x === 'string' ? { x: dataUtc(p.x), y: p.y } : p
+        )),
         borderColor: cor,
         backgroundColor: cor,
         borderWidth: 2,

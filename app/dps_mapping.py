@@ -16,6 +16,8 @@ A ordem de resolução é sempre a mesma, da fonte mais confiável para a menos:
 
 from typing import Dict, Optional
 
+from app.solar.base import CANAIS_SOLAR
+
 # --------------------------------------------------------------------------
 # Códigos nomeados do Tuya. Estes NÃO são ambíguos: 'cur_power' é potência em
 # qualquer categoria. É a tabela de referência de verdade.
@@ -88,6 +90,11 @@ DPS_NOMEADOS: Dict[str, dict] = {
 # dicionário global (interruptor e depois sensor), e como literal Python a
 # última vencia — todo DP 1 virava "Temperatura" e nenhum interruptor era
 # rotulado corretamente. Separado por categoria, cada um resolve certo.
+# Canais solares canonicos (app/solar/base.py). A tabela e definida la --
+# o vocabulario pertence a abstracao solar -- e absorvida aqui para que
+# get_dp_info/get_device_dps_list resolvam nome e unidade sem caso especial.
+DPS_NOMEADOS.update(CANAIS_SOLAR)
+
 # --------------------------------------------------------------------------
 DPS_POR_CATEGORIA: Dict[str, Dict[str, str]] = {
     # Tomadas e filtros de linha

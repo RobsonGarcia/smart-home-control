@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}{{ st.device.name }} - Solar{% endblock %}
+
+{% block breadcrumb %}
+<a href="/solar">Solar</a>
+<span class="sep">/</span>
+<span class="current">{{ st.device.name }}</span>
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="/energy" class="btn">{{ m.icone_svg('seta', 13) }} Usar nos grupos de energia</a>
+{% endblock %}
+
+{% block content %}
+{% set e = m.estado(st) %}
+<div class="page-head">
+    <div class="page-head-text">
+        <h1 style="display: flex; align-items: center; gap: 12px;">
+            {{ m.icone('solar', 24) }} {{ st.device.name }} {{ m.badge(e) }}
+        </h1>
+        <p class="page-lead">
+            {{ integracao.nome if integracao else 'Inversor solar' }}
+            {% if integracao and integracao.planta_nome %} · {{ integracao.planta_nome }}{% endif %}
+            · <span class="mono">{{ vinculo.sn }}</span>
+            {% if st.local %} · {{ st.local.nome }}{% endif %}
+        </p>
+    </div>
+    <div class="controls" style="margin: 0; align-items: center;">
+        <label class="dim" style="font-size: 12.5px;">Intervalo
+            <input type="number" class="poll-interval-input"
+                   value="{{ st.config.poll_interval_seconds }}" min="60" step="30"
+                   onchange="atualizarIntervalo('{{ st.device.id }}', this.value)"> s
+        </label>
+        {{ m.toggle(st) }}
+    </div>
+</div>
+
+{# Os quatro números que interessam, da última leitura #}
+{% set por_codigo = {} %}
+{% for l in leituras %}{% if por_codigo.update({l.code: l}) %}{% endif %}{% endfor %}
+<div class="tiles">
+    {% for codigo, casas in [('potencia_ca', 0), ('geracao_hoje', 1), ('geracao_total', 1), ('temperatura', 1)] %}
+    {% set l = por_codigo.get(codigo) %}
+    <div class="tile">
+        <span class="rotulo">{{ l.name if l else m.rotulo_estado(e) }}</span>
+        <span class="valor">
+            {%- if l is not none -%}
+                {{ ('%.' ~ casas ~ 'f')|format(l.valor) }} <span class="dim" style="font-size: 13px;">{{ l.unit }}</span>
+            {%- else -%}—{%- endif -%}
+        </span>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="chart-container" style="margin-top: 22px;">
+    <div class="chart-head">
+        <h2>Potência — últimas 24 h</h2>
+        <span class="dim" style="font-size: 12px;" data-tempo="{{ st.reading.collected_at if st.reading else '' }}">—</span>
+    </div>
+    <div id="legenda" class="dps-legend"></div>
+    <div style="position: relative; height: 320px;">
+        <canvas id="grafico"></canvas>
+    </div>
+    <p id="graficoVazio" class="dim" style="display: none; font-size: 12.5px;">
+        Ainda sem pontos nas últimas 24 h — o backfill e a coleta preenchem isto sozinhos.
+    </p>
+</div>
+
+{% if leituras %}
+<div class="card" style="margin-top: 22px;">
+    <h2 style="margin-top: 0;">Todos os canais</h2>
+    <table class="devices-table">
+        <thead><tr><th>Canal</th><th>Código</th><th class="num">Valor</th><th>Unidade</th></tr></thead>
+        <tbody>
+            {% for l in leituras %}
+            <tr>
+                <td>{{ l.name }}</td>
+                <td><span class="mono dim">{{ l.code }}</span></td>
+                <td class="num"><span class="mono">{{ l.valor }}</span></td>
+                <td class="dim">{{ l.unit }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="dim" style="font-size: 12px; margin-bottom: 0;">
+        Estes códigos são o vocabulário do painel, não o do fabricante — qualquer um deles pode
+        virar série num <a href="/energy">grupo de energia</a>, inclusive misturado com tomadas Tuya.
+    </p>
+</div>
+{% else %}
+<div class="empty-state" style="margin-top: 22px;">
+    <strong>Nenhuma leitura ainda</strong>
+    O coletor precisa estar rodando (<span class="mono">python run_collector.py</span>) — a primeira
+    telemetria chega no próximo ciclo.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SERIES = {{ series|tojson }};
+
+async function alternarMonitor(el, deviceId) {
+    const ligado = el.classList.contains('on');
+    el.classList.toggle('on');
+    try {
+        await apiPost('/devices/' + deviceId + '/toggle');
+        toastOk(ligado ? 'Coleta desligada' : 'Coleta ligada');
+        recarregar(900);
+    } catch (erro) {
+        el.classList.toggle('on');
+        toastErro(erro.message);
+    }
+}
+
+async function atualizarIntervalo(deviceId, valor) {
+    await executar(
+        () => apiPost('/devices/' + deviceId + '/poll_interval',
+                      { poll_interval_seconds: parseInt(valor, 10) }),
+        null,
+        (d) => toastOk('Intervalo: ' + d.poll_interval_seconds + ' s')
+    );
+}
+
+(function desenhar() {
+    if (!SERIES.length) {
+        document.getElementById('graficoVazio').style.display = '';
+        return;
+    }
+    const CORES = coresDeSeries(SERIES);
+    const legenda = document.getElementById('legenda');
+    const datasets = SERIES.map((s) => {
+        const item = document.createElement('span');
+        item.className = 'dps-legend-item active';
+        item.innerHTML = '<span class="legend-color" style="background:' + CORES[s.id] + '"></span>' + s.label;
+        legenda.appendChild(item);
+        return datasetDeSerie(
+            s.label,
+            s.data.map((p) => ({ x: p.timestamp, y: p.value })),
+            CORES[s.id]
+        );
+    });
+    const grafico = new Chart(
+        document.getElementById('grafico').getContext('2d'),
+        configGraficoLinha(datasets, { unidade: 'W' })
+    );
+    // Legenda clicável: esconder uma série não repinta as outras — a cor é
+    // da série, não da posição.
+    legenda.querySelectorAll('.dps-legend-item').forEach((item, idx) => {
+        item.onclick = () => {
+            const visivel = grafico.isDatasetVisible(idx);
+            grafico.setDatasetVisibility(idx, !visivel);
+            item.classList.toggle('active', !visivel);
+            grafico.update();
+        };
+    });
+})();
+</script>
+{% endblock %}

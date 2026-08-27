@@ -1,0 +1,435 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}Solar - Painel Tuya{% endblock %}
+
+{% block breadcrumb %}<span class="current">Solar</span>{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="abrirConfigurador()">
+    {{ m.icone_svg('mais') }} Nova integração
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div class="page-head-text">
+        <h1>Energia solar</h1>
+        <p class="page-lead">Geração fotovoltaica lida direto da cloud do fabricante — total e por
+        canal de placas. Os canais do inversor entram nos grupos de Energia como qualquer outro.</p>
+    </div>
+</div>
+
+{% for i in integracoes %}
+<div class="card" style="margin-bottom: 22px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <span class="device-icone">{{ m.icone('solar', 22) }}</span>
+            <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                <strong style="font-size: 16px; letter-spacing: -0.2px;">{{ i.nome }}</strong>
+                <span class="dim" style="font-size: 12.5px;">
+                    {{ i.planta_nome or 'Planta' }} · {{ i.driver }} · nível {{ i.nivel_acesso }}
+                    {% if not i.backfill_feito and 'historico' in i.capacidades %} · <span style="color: var(--accent);">importando histórico…</span>{% endif %}
+                </span>
+            </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+            <span class="toggle {% if i.enabled %}on{% endif %}" role="switch"
+                  aria-checked="{{ 'true' if i.enabled else 'false' }}"
+                  title="{{ 'Coleta ligada' if i.enabled else 'Coleta desligada' }}"
+                  onclick="alternarIntegracao(this, {{ i.id }})">
+                <span class="knob"></span>
+            </span>
+            <button class="btn btn-small" title="Procurar inversores novos ou trocados"
+                    onclick="redescobrir({{ i.id }})">
+                {{ m.icone_svg('scan', 14) }} Re-descobrir
+            </button>
+            <button class="btn btn-danger btn-icon" title="Excluir integração"
+                    onclick='excluirIntegracao({{ i.id }}, {{ i.nome|tojson }})'>
+                {{ m.icone_svg('lixeira', 14) }}
+            </button>
+        </div>
+    </div>
+
+    {# Resumo da planta: a página não espera a cloud — o JS preenche depois.
+       Só aparece se o nível de acesso da integração fornecer o resumo. #}
+    {% if 'resumo' in i.capacidades %}
+    <div class="tiles" data-resumo="{{ i.id }}">
+        <div class="tile"><span class="rotulo">Potência agora</span><span class="valor" data-r="potencia">—</span></div>
+        <div class="tile"><span class="rotulo">Geração hoje</span><span class="valor" data-r="hoje">—</span></div>
+        <div class="tile"><span class="rotulo">No mês</span><span class="valor" data-r="mes">—</span></div>
+        <div class="tile"><span class="rotulo">Total</span><span class="valor" data-r="total">—</span></div>
+    </div>
+    {% endif %}
+
+    {% if i.inversores %}
+    <table class="devices-table">
+        <thead>
+            <tr>
+                <th>Inversor</th>
+                <th>Status</th>
+                <th class="num">Potência</th>
+                <th class="num">Hoje</th>
+                <th>Última leitura</th>
+                <th class="num">Intervalo</th>
+                <th>Coletar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for inv in i.inversores %}
+            {% set st = inv.st %}
+            {% set e = m.estado(st) if st else 'sem-coleta' %}
+            <tr>
+                <td class="cel-device">
+                    {{ m.icone('solar', 16) }}
+                    <span style="display: flex; flex-direction: column; gap: 2px;">
+                        <a href="/solar/inversores/{{ inv.vinculo.device_id }}" class="device-nome">
+                            {{ st.device.name if st else inv.vinculo.sn }}</a>
+                        <span class="mono dim" style="font-size: 11px;">{{ inv.vinculo.sn }}</span>
+                    </span>
+                </td>
+                <td>{{ m.dot(e) }} {{ m.rotulo_estado(e) }}</td>
+                <td class="num">{% if inv.potencia is not none %}<span class="mono">{{ '%.0f'|format(inv.potencia) }} W</span>{% else %}<span class="dim">—</span>{% endif %}</td>
+                <td class="num">{% if inv.geracao_hoje is not none %}<span class="mono">{{ '%.1f'|format(inv.geracao_hoje) }} kWh</span>{% else %}<span class="dim">—</span>{% endif %}</td>
+                <td><span class="dim" data-tempo="{{ st.reading.collected_at if st and st.reading else '' }}">—</span></td>
+                <td class="num">
+                    {% if st %}
+                    <input type="number" class="poll-interval-input"
+                           value="{{ st.config.poll_interval_seconds }}" min="60" step="30"
+                           onchange="atualizarIntervalo('{{ inv.vinculo.device_id }}', this.value)"> s
+                    {% endif %}
+                </td>
+                <td>{% if st %}{{ m.toggle(st) }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="dim" style="font-size: 12.5px; margin: 0;">
+        Nenhum inversor descoberto ainda — a planta pode estar offline. Use "Re-descobrir".
+    </p>
+    {% endif %}
+</div>
+{% endfor %}
+
+{% if not integracoes %}
+<div class="empty-state">
+    <strong>Nenhuma integração solar</strong>
+    Conecte a conta do fabricante do seu inversor (SolPlanet, por enquanto): o painel descobre a
+    planta, os inversores e os canais sozinho, e importa os últimos 30 dias de geração.
+</div>
+{% endif %}
+
+{# ============================ Configurador ============================ #}
+<div id="modalSolar" class="modal">
+    <div class="modal-content" style="max-width: 640px;">
+        <div class="modal-head">
+            <div>
+                <h2>Nova integração solar</h2>
+                <div class="sub">Credenciais → planta → pronto. Inversores e canais são descobertos sozinhos.</div>
+            </div>
+            <span class="close" onclick="fecharModal('modalSolar')">&times;</span>
+        </div>
+        <form onsubmit="return false;">
+            <div class="modal-body">
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <div class="campo" style="flex: 1 1 200px;">
+                        <label for="solarDriver">Fabricante</label>
+                        <select id="solarDriver" onchange="montarCamposCredenciais()"></select>
+                    </div>
+                    <div class="campo" style="flex: 1 1 240px;">
+                        <label for="solarNome">Nome da integração</label>
+                        <input type="text" id="solarNome" required placeholder="ex: Solar de casa">
+                    </div>
+                </div>
+
+                <div class="campo">
+                    <label for="solarNivel">Nível de acesso</label>
+                    <select id="solarNivel" onchange="descreverNivel()"></select>
+                    <span class="hint" id="solarNivelDesc"></span>
+                </div>
+
+                <div id="solarCredenciais" style="display: flex; gap: 16px; flex-wrap: wrap;"></div>
+
+                <div class="aviso" style="font-size: 12.5px;">
+                    {{ m.icone_svg('info', 14) }}
+                    <span>As credenciais ficam só no banco local (fora do repositório) e nunca
+                    aparecem em respostas ou logs. A App Key/Secret você solicita ao suporte do
+                    fabricante; o token é o da sua conta.</span>
+                </div>
+
+                <div id="solarPasso2" style="display: none; flex-direction: column; gap: 16px;">
+                    <div class="campo">
+                        <label>Planta</label>
+                        <div id="solarPlantas" class="radio-cards" style="grid-template-columns: 1fr;"></div>
+                    </div>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <div class="campo" style="flex: 1 1 200px;">
+                            <label for="solarLocal">Local <span class="hint">opcional — permite grupos com escopo</span></label>
+                            <select id="solarLocal">
+                                <option value="">Sem local</option>
+                                {% for l in locais %}<option value="{{ l.id }}">{{ l.nome }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="campo" style="flex: 1 1 200px;">
+                            <label for="solarIntervalo">Intervalo de coleta (s)</label>
+                            <input type="number" id="solarIntervalo" value="{{ intervalo_padrao }}" min="60" step="30">
+                            <span class="hint">O equipamento gera telemetria a cada ~5 min; leituras repetidas são descartadas.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="solarStatus" class="dim" style="font-size: 12.5px; display: none;"></div>
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn" onclick="fecharModal('modalSolar')">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnTestar" onclick="testarCredenciais()">Testar e listar plantas</button>
+                <button type="button" class="btn btn-primary" id="btnCriar" style="display: none;" onclick="criarIntegracao()">Criar integração</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const DRIVERS = {{ drivers|tojson }};
+let plantaEscolhida = null;
+
+function abrirConfigurador() {
+    document.getElementById('solarPasso2').style.display = 'none';
+    document.getElementById('btnCriar').style.display = 'none';
+    document.getElementById('btnTestar').style.display = '';
+    document.getElementById('solarStatus').style.display = 'none';
+    plantaEscolhida = null;
+    montarCamposCredenciais();
+    abrirModal('modalSolar');
+}
+
+function driverAtual() {
+    const sel = document.getElementById('solarDriver');
+    if (!sel.options.length) {
+        DRIVERS.forEach((d) => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.rotulo;
+            sel.appendChild(opt);
+        });
+    }
+    return DRIVERS.find((d) => d.id === sel.value) || DRIVERS[0];
+}
+
+function nivelAtual() {
+    const driver = driverAtual();
+    const sel = document.getElementById('solarNivel');
+    return driver.niveis_acesso.find((n) => n.valor === sel.value)
+        || driver.niveis_acesso[0];
+}
+
+function descreverNivel() {
+    const nivel = nivelAtual();
+    const desc = document.getElementById('solarNivelDesc');
+    desc.textContent = nivel.descricao || '';
+    desc.style.color = nivel.disponivel ? '' : 'var(--offline, #c96a5a)';
+}
+
+function montarNiveis() {
+    const driver = driverAtual();
+    const sel = document.getElementById('solarNivel');
+    sel.innerHTML = '';
+    driver.niveis_acesso.forEach((n) => {
+        const opt = document.createElement('option');
+        opt.value = n.valor;
+        opt.textContent = n.rotulo + (n.disponivel ? '' : ' — em breve');
+        opt.disabled = !n.disponivel;
+        sel.appendChild(opt);
+    });
+    // seleciona o primeiro nível disponível
+    const disponivel = driver.niveis_acesso.find((n) => n.disponivel);
+    if (disponivel) sel.value = disponivel.valor;
+    descreverNivel();
+}
+
+function montarCamposCredenciais() {
+    montarNiveis();
+    const driver = driverAtual();
+    const caixa = document.getElementById('solarCredenciais');
+    caixa.innerHTML = '';
+    driver.campos_credenciais.forEach((c) => {
+        const campo = document.createElement('div');
+        campo.className = 'campo';
+        campo.style.flex = '1 1 180px';
+        const label = document.createElement('label');
+        label.textContent = c.rotulo;
+        if (c.opcional) {
+            const marca = document.createElement('span');
+            marca.className = 'hint';
+            marca.textContent = ' opcional';
+            label.appendChild(marca);
+        }
+        const input = document.createElement('input');
+        input.type = c.secreto ? 'password' : 'text';
+        // 'new-password' impede o Chromium de pintar autofill nos secretos
+        input.autocomplete = c.secreto ? 'new-password' : 'off';
+        input.dataset.credencial = c.chave;
+        campo.appendChild(label);
+        campo.appendChild(input);
+        if (c.dica) {
+            const dica = document.createElement('span');
+            dica.className = 'hint';
+            dica.textContent = c.dica;
+            campo.appendChild(dica);
+        }
+        caixa.appendChild(campo);
+    });
+}
+
+function credenciaisDoForm() {
+    const saida = {};
+    document.querySelectorAll('#solarCredenciais [data-credencial]').forEach((el) => {
+        saida[el.dataset.credencial] = el.value.trim();
+    });
+    return saida;
+}
+
+function statusConfig(texto) {
+    const el = document.getElementById('solarStatus');
+    el.textContent = texto || '';
+    el.style.display = texto ? '' : 'none';
+}
+
+async function testarCredenciais() {
+    statusConfig('Falando com a cloud do fabricante…');
+    try {
+        const r = await apiPost('/solar/api/testar', {
+            driver: driverAtual().id,
+            nivel_acesso: nivelAtual().valor,
+            credenciais: credenciaisDoForm(),
+        });
+        statusConfig('');
+        const caixa = document.getElementById('solarPlantas');
+        caixa.innerHTML = '';
+        if (!r.plantas.length) {
+            statusConfig('Credenciais válidas, mas a conta não tem nenhuma planta.');
+            return;
+        }
+        r.plantas.forEach((p, idx) => {
+            const card = document.createElement('label');
+            card.className = 'radio-card' + (idx === 0 ? ' selected' : '');
+            card.innerHTML = '<span class="titulo">' + p.nome + '</span>' +
+                '<span class="desc">' + (p.potencia_kw || 0) + ' kW · ' +
+                (p.cidade || 'sem cidade') + ' · ' + (p.status || '?') + '</span>';
+            card.onclick = () => {
+                caixa.querySelectorAll('.radio-card').forEach((c) => c.classList.remove('selected'));
+                card.classList.add('selected');
+                plantaEscolhida = p;
+            };
+            caixa.appendChild(card);
+        });
+        plantaEscolhida = r.plantas[0];
+        document.getElementById('solarPasso2').style.display = 'flex';
+        document.getElementById('btnTestar').style.display = 'none';
+        document.getElementById('btnCriar').style.display = '';
+        toastOk('Credenciais aceitas — ' + r.plantas.length + ' planta(s)');
+    } catch (erro) {
+        statusConfig('');
+        toastErro(erro.message);
+    }
+}
+
+async function criarIntegracao() {
+    if (!plantaEscolhida) { toastErro('Escolha uma planta'); return; }
+    const nome = document.getElementById('solarNome').value.trim() || plantaEscolhida.nome;
+    statusConfig('Criando a integração e descobrindo inversores…');
+    await executar(
+        () => apiPost('/solar/integracoes', {
+            driver: driverAtual().id,
+            nivel_acesso: nivelAtual().valor,
+            credenciais: credenciaisDoForm(),
+            planta_apikey: plantaEscolhida.apikey,
+            planta_nome: plantaEscolhida.nome,
+            nome: nome,
+            local_id: document.getElementById('solarLocal').value || null,
+            poll_interval_seconds: document.getElementById('solarIntervalo').value,
+        }),
+        null,
+        (r) => {
+            toastOk(r.inversores + ' inversor(es) configurado(s). O histórico chega em alguns minutos.');
+            fecharModal('modalSolar');
+            recarregar(900);
+        }
+    );
+    statusConfig('');
+}
+
+async function alternarIntegracao(el, id) {
+    const ligado = el.classList.contains('on');
+    el.classList.toggle('on');
+    try {
+        await apiPut('/solar/integracoes/' + id, { enabled: !ligado });
+        toastOk(ligado ? 'Coleta da integração desligada' : 'Coleta da integração ligada');
+        recarregar(900);
+    } catch (erro) {
+        el.classList.toggle('on');
+        toastErro(erro.message);
+    }
+}
+
+async function redescobrir(id) {
+    await executar(
+        () => apiPost('/solar/integracoes/' + id + '/descobrir'),
+        null,
+        (r) => { toastOk(r.inversores + ' inversor(es) na planta'); recarregar(900); }
+    );
+}
+
+async function excluirIntegracao(id, nome) {
+    if (!(await confirmar('Excluir "' + nome + '"? As leituras dos inversores dela são '
+                          + 'apagadas; séries em grupos de energia ficam marcadas como '
+                          + 'sem dispositivo.',
+                          { titulo: 'Excluir integração', rotulo: 'Excluir',
+                            perigo: true }))) return;
+    await executar(
+        () => apiDelete('/solar/integracoes/' + id),
+        'Integração excluída',
+        () => recarregar(700)
+    );
+}
+
+async function alternarMonitor(el, deviceId) {
+    const ligado = el.classList.contains('on');
+    el.classList.toggle('on');
+    try {
+        await apiPost('/devices/' + deviceId + '/toggle');
+        toastOk(ligado ? 'Coleta desligada' : 'Coleta ligada');
+    } catch (erro) {
+        el.classList.toggle('on');
+        toastErro(erro.message);
+    }
+}
+
+async function atualizarIntervalo(deviceId, valor) {
+    await executar(
+        () => apiPost('/devices/' + deviceId + '/poll_interval',
+                      { poll_interval_seconds: parseInt(valor, 10) }),
+        null,
+        (d) => toastOk('Intervalo: ' + d.poll_interval_seconds + ' s')
+    );
+}
+
+// Resumo das plantas, sem segurar o carregamento da página.
+document.querySelectorAll('[data-resumo]').forEach(async (bloco) => {
+    try {
+        const r = await apiGet('/solar/api/integracoes/' + bloco.dataset.resumo + '/resumo');
+        const kw = r.potencia_w >= 10000;
+        bloco.querySelector('[data-r="potencia"]').textContent =
+            kw ? numero(r.potencia_w / 1000, 2) + ' kW' : numero(r.potencia_w, 0) + ' W';
+        bloco.querySelector('[data-r="hoje"]').textContent = numero(r.geracao_hoje_kwh, 1) + ' kWh';
+        bloco.querySelector('[data-r="mes"]').textContent = numero(r.geracao_mes_kwh, 1) + ' kWh';
+        bloco.querySelector('[data-r="total"]').textContent = numero(r.geracao_total_kwh, 1) + ' kWh';
+    } catch (erro) {
+        // Cloud fora do ar não é erro da página — os tiles ficam em "—".
+    }
+});
+</script>
+{% endblock %}

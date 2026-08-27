@@ -21,7 +21,7 @@ from app.db import get_connection
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 # Lista, nao um script: conn.executescript() faz COMMIT implicito da
@@ -143,7 +143,105 @@ def _migracao_001(conn):
                 cur.rowcount, DEFAULT_LOCAL_NAME)
 
 
-MIGRACOES = {1: _migracao_001}
+_DDL_SOLAR = [
+    # Uma integracao = uma conta/planta num fabricante (driver). As credenciais
+    # ficam no banco de proposito: o *.db e gitignorado e o painel e de LAN --
+    # e nada delas pode aparecer em log ou resposta de API.
+    """CREATE TABLE IF NOT EXISTS solar_integracoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        driver TEXT NOT NULL,
+        nome TEXT NOT NULL,
+        credenciais_json TEXT NOT NULL,
+        planta_apikey TEXT,
+        planta_nome TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        backfill_feito INTEGER NOT NULL DEFAULT 0,
+        nivel_acesso TEXT NOT NULL DEFAULT 'pro',
+        local_id INTEGER REFERENCES locais(id),
+        poll_interval_seconds INTEGER NOT NULL DEFAULT 300,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""",
+    # O vinculo inversor -> integracao. O inversor em si e uma linha em
+    # devices (source = 'solar'); aqui fica so o que e especifico da coleta
+    # cloud: o serial na API do fabricante e o coletor (PMU) dele.
+    """CREATE TABLE IF NOT EXISTS solar_inversores (
+        device_id TEXT PRIMARY KEY,
+        integracao_id INTEGER NOT NULL REFERENCES solar_integracoes(id),
+        sn TEXT NOT NULL UNIQUE,
+        psn TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""",
+    """CREATE INDEX IF NOT EXISTS idx_solar_inversores_integracao
+        ON solar_inversores(integracao_id)""",
+]
+
+
+def _reconstruir_devices(conn):
+    """
+    Recria devices aceitando inversores solares: local_key vira nulavel (nao
+    existe chave Tuya num inversor) e o CHECK de source ganha 'solar'.
+
+    SQLite nao altera constraint por ALTER, entao e o mesmo procedimento de
+    _reconstruir_comparison_groups: recriar e copiar pelo Python, sem
+    ALTER TABLE RENAME. DROP TABLE derruba os indices junto -- eles sao
+    recriados no fim.
+    """
+    ddl_atual = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'devices'"
+    ).fetchone()[0]
+    if "'solar'" in ddl_atual:
+        return  # banco novo: schema.sql ja criou no formato certo
+
+    colunas = ("id, name, local_key, category, product_name, model, "
+               "mapping_json, is_sub, parent_id, ip, protocol_version, "
+               "last_seen_at, local_id, comodo_id, source, created_at, "
+               "updated_at")
+    linhas = conn.execute("SELECT %s FROM devices" % colunas).fetchall()
+
+    conn.execute("DROP TABLE devices")
+    conn.execute("""
+        CREATE TABLE devices (
+            id TEXT PRIMARY KEY NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            local_key TEXT,
+            category TEXT,
+            product_name TEXT,
+            model TEXT,
+            mapping_json TEXT,
+            is_sub INTEGER DEFAULT 0,
+            parent_id TEXT,
+            ip TEXT,
+            protocol_version REAL DEFAULT 3.4,
+            last_seen_at TIMESTAMP,
+            local_id INTEGER REFERENCES locais(id),
+            comodo_id INTEGER REFERENCES comodos(id),
+            source TEXT DEFAULT 'cloud'
+                CHECK(source IN ('cloud', 'broadcast', 'solar')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(id)
+        )
+    """)
+    conn.executemany(
+        "INSERT INTO devices (%s) VALUES (%s)"
+        % (colunas, ", ".join(["?"] * 17)),
+        [tuple(r) for r in linhas],
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_devices_local_comodo"
+                 " ON devices(local_id, comodo_id)")
+    logger.info("migração: devices recriada para aceitar source='solar'"
+                " (%d dispositivos preservados)", len(linhas))
+
+
+def _migracao_002(conn):
+    """Energia solar: devices aceita inversores e nascem as tabelas solares."""
+    _reconstruir_devices(conn)
+    for ddl in _DDL_SOLAR:
+        conn.execute(ddl)
+
+
+MIGRACOES = {1: _migracao_001, 2: _migracao_002}
 
 
 def run_migrations(max_wait_seconds: int = 20) -> int:

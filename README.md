@@ -198,6 +198,41 @@ Roda contínuo      (disparado por monitor_configs)
    - Clique na legenda para mostrar/ocultar série
 4. **Remover série ou grupo**: Use os botões "Remover" ou "Deletar"
 
+## ☀️ Energia Solar
+
+Além dos dispositivos Tuya, o painel coleta a **geração fotovoltaica** direto
+da API cloud do fabricante do inversor. Fabricante suportado hoje: **SolPlanet
+(AiSWEI)** — outros entram implementando um driver (`app/solar/`).
+
+- **Configuração pela interface** (menu *Solar* → *Nova integração*): escolha
+  o nível de acesso, informe as credenciais e a região; o painel valida,
+  lista (ou aceita à mão) a planta, descobre inversores e canais sozinho e
+  importa os últimos 30 dias de histórico.
+- **Telemetria geral e por canal**: potência CA total, geração do dia/total e
+  tensão/corrente/potência de cada canal MPPT (onde as strings de placas se
+  conectam), tudo em códigos canônicos do painel (`potencia_ca`,
+  `potencia_mppt_1`…) com nome amigável em português.
+- **Grupos de energia**: qualquer canal do inversor vira série num grupo
+  comparativo, inclusive misturado com tomadas Tuya.
+- **Dois níveis de acesso** (flag por integração): *Pro/Business* (família
+  `/pro/*`, com token de usuário e listagem de plantas) e *Comum* (conta do
+  cloud.solplanet.net: App Key + API Secret + API Key da planta, endpoints
+  End User). Ambos entregam a telemetria por canal e o histórico.
+  Documentação das duas famílias em `docs/`.
+- **Região**: o gateway é regional (`eu` para Europa, `ap` para Ásia — **as
+  contas do Brasil ficam no `ap`**). Um `A400IK Invalid AppKey` em todas as
+  chamadas quase sempre significa gateway da região errada, não credencial
+  inválida; se as duas regiões recusarem, aí sim peça ao suporte do
+  fabricante a ativação da App Key na API.
+- **Fabricante novo**: um driver + registro, sem tocar em coletor ou telas —
+  o passo a passo completo está em
+  [docs/NOVO_FABRICANTE_SOLAR.md](docs/NOVO_FABRICANTE_SOLAR.md).
+- **Credenciais**: ficam apenas no `data/app.db` (fora do repositório). Para
+  testar a API antes de configurar, use `python scripts/sonda_solplanet.py`
+  com um `solar.local.json` na raiz (gitignorado):
+  `{"appkey": "...", "appsecret": "...", "token": "...", "planta_apikey": "...", "regiao": "ap", "nivel_acesso": "comum"}`
+  (token só é obrigatório no Pro; `planta_apikey` é obrigatório sem token).
+
 ## 🔌 DPs Comuns em Medidores de Energia
 
 Se você tem um medidor multifase como o **PJ1103-C** (com 2 canais de energia), procure por:

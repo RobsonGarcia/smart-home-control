@@ -52,8 +52,8 @@
         <h3>{{ bloco.comodo.nome }}</h3>
         <span class="meta">{{ bloco.devices|selectattr('is_online')|list|length }}/{{ bloco.devices|length }} online</span>
         <span class="rule"></span>
-        <span class="action" onclick="renomearComodo({{ bloco.comodo.id }}, {{ bloco.comodo.nome|tojson }})">Renomear</span>
-        <span class="action" onclick="excluirComodo({{ bloco.comodo.id }}, {{ bloco.comodo.nome|tojson }}, {{ bloco.devices|length }})"
+        <span class="action" onclick='renomearComodo({{ bloco.comodo.id }}, {{ bloco.comodo.nome|tojson }})'>Renomear</span>
+        <span class="action" onclick='excluirComodo({{ bloco.comodo.id }}, {{ bloco.comodo.nome|tojson }}, {{ bloco.devices|length }})'
               style="color: var(--text-4);">Excluir</span>
     </div>
 
@@ -121,7 +121,7 @@
                 <td>{{ m.toggle(st) }}</td>
                 <td style="text-align: right;">
                     <button class="btn btn-small btn-primary"
-                            onclick="abrirAtribuicao({{ st.device.id|tojson }}, {{ st.device.name|tojson }})">
+                            onclick='abrirAtribuicao({{ st.device.id|tojson }}, {{ st.device.name|tojson }})'>
                         Atribuir cômodo
                     </button>
                 </td>
@@ -238,14 +238,17 @@ async function salvarAtribuicao(ev) {
 }
 
 async function novoComodo() {
-    const nome = prompt('Novo cômodo em {{ local.nome }}:');
+    const nome = await pedirTexto('Novo cômodo em {{ local.nome }}:',
+                                  { titulo: 'Novo cômodo', rotulo: 'Criar',
+                                    placeholder: 'ex: Cozinha' });
     if (!nome) return;
     await executar(() => apiPost('/locais/' + LOCAL_ID + '/comodos', { nome: nome }),
                    'Cômodo criado', () => recarregar());
 }
 
 async function renomearComodo(comodoId, atual) {
-    const nome = prompt('Novo nome do cômodo:', atual);
+    const nome = await pedirTexto('Novo nome do cômodo:',
+                                  { titulo: 'Renomear cômodo', valor: atual });
     if (!nome || nome === atual) return;
     await executar(() => apiPut('/locais/' + LOCAL_ID + '/comodos/' + comodoId, { nome: nome }),
                    'Cômodo renomeado', () => recarregar());
@@ -255,7 +258,8 @@ async function excluirComodo(comodoId, nome, qtd) {
     const aviso = qtd
         ? 'Excluir "' + nome + '"? Os ' + qtd + ' dispositivos voltam para "sem cômodo" — nenhum é apagado.'
         : 'Excluir o cômodo "' + nome + '"?';
-    if (!confirm(aviso)) return;
+    if (!(await confirmar(aviso, { titulo: 'Excluir cômodo',
+                                   rotulo: 'Excluir', perigo: true }))) return;
     await executar(() => apiDelete('/locais/' + LOCAL_ID + '/comodos/' + comodoId),
                    'Cômodo excluído', () => recarregar());
 }
