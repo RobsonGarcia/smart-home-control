@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS devices (
     category TEXT,
     product_name TEXT,
     model TEXT,
+    -- Identificador do PRODUTO no Tuya (nao do aparelho). E a chave para o
+    -- perfil de DPs em app/modelos.py, usado quando a nuvem nao descreve o
+    -- produto e o mapping_json vem vazio.
+    product_id TEXT,
     mapping_json TEXT,
     -- Imagem do produto publicada pelo Tuya (campo `icon` do devices.json).
     -- E uma URL do CDN deles: some numa rede sem internet, e a tela cai no

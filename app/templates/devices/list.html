@@ -192,7 +192,16 @@ async function importarDevicesJson() {
 async function escanearRede() {
     mostrarStatus('Escaneando a rede… isso pode levar alguns minutos.');
     await executar(() => apiPost('/devices/scan/now'), null, (d) => {
-        mostrarStatus('Scan concluído: ' + d.found + ' encontrados, ' + d.errors + ' erros');
+        // O scan atualiza o IP de quem já está no inventário; "ignorados" são
+        // os aparelhos vistos na rede sem local_key conhecida, que só entram
+        // pela importação do devices.json.
+        const partes = [];
+        if (d.updated) partes.push(d.updated + ' atualizado' + (d.updated === 1 ? '' : 's'));
+        if (d.created) partes.push(d.created + ' novo' + (d.created === 1 ? '' : 's'));
+        if (d.ignored) partes.push(d.ignored + ' ignorado' + (d.ignored === 1 ? '' : 's') + ' (sem chave)');
+        if (d.errors) partes.push(d.errors + ' erro' + (d.errors === 1 ? '' : 's'));
+        mostrarStatus('Scan concluído: '
+                      + (partes.length ? partes.join(', ') : 'nada encontrado na rede'));
         recarregar(1500);
     });
 }

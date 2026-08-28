@@ -1,4 +1,3 @@
-import json
 import logging
 import sqlite3
 from fastapi import APIRouter, Request, Query, Body, HTTPException
@@ -28,6 +27,7 @@ from app.repository import (
     get_devices_for_group_scope,
 )
 from app.dps_mapping import (
+    mapping_do_device,
     get_common_dps_list,
     get_device_dps_list,
 )
@@ -216,13 +216,9 @@ async def get_device_dps(device_id: str):
     if not device_info:
         raise NotFoundError("Dispositivo %s não encontrado" % device_id)
 
-    # Parsear mapping_json do device
-    mapping = {}
-    if device_info.get('mapping_json'):
-        try:
-            mapping = json.loads(device_info['mapping_json'])
-        except (json.JSONDecodeError, TypeError):
-            mapping = {}
+    # A especificacao de DPs: o mapping do Tuya, ou o perfil por modelo quando
+    # a nuvem nao descreve o produto.
+    mapping = mapping_do_device(device_info)
 
     # Nome amigavel resolvido com o mapping E a categoria do aparelho. Antes
     # daqui saia o codigo cru do Tuya ("switch_1") como nome.
@@ -270,13 +266,8 @@ async def get_group_data(group_id: int,
     def _spec(device_id, dps_code):
         if device_id not in cache_device:
             device = get_device(device_id) or {}
-            mapping = {}
-            if device.get('mapping_json'):
-                try:
-                    mapping = json.loads(device['mapping_json']) or {}
-                except (ValueError, TypeError):
-                    mapping = {}
-            cache_device[device_id] = (device.get('category'), mapping)
+            cache_device[device_id] = (device.get('category'),
+                                       mapping_do_device(device))
         categoria, mapping = cache_device[device_id]
         return get_dp_info(dps_code, categoria, mapping)
 

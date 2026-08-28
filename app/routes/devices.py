@@ -67,19 +67,16 @@ def _dados_do_dispositivo(device_id: str):
     Devolve None quando o dispositivo nao existe.
     """
     import json
-    from app.dps_mapping import get_dp_info, unidade_exibivel
+    from app.dps_mapping import (get_dp_info, mapping_do_device,
+                                 plotavel, unidade_exibivel)
 
     status = get_device_status(device_id)
     if not status:
         return None
 
-    # mapping_json do dispositivo: fonte autoritativa dos nomes de DP.
-    device_mapping = {}
-    if status['device'].get('mapping_json'):
-        try:
-            device_mapping = json.loads(status['device']['mapping_json'])
-        except (json.JSONDecodeError, TypeError):
-            device_mapping = {}
+    # A especificacao de DPs do aparelho: o mapping do Tuya, ou o perfil por
+    # modelo quando a nuvem nao descreve o produto.
+    device_mapping = mapping_do_device(status['device'])
 
     # Buscar últimas 100 leituras (últimas ~1.67 horas se coleta a cada minuto)
     with get_db() as conn:
@@ -115,6 +112,11 @@ def _dados_do_dispositivo(device_id: str):
                             device_mapping)
                         dps_timeseries[dp_code] = {
                             'name': info['name'],
+                            # Ajuste e calibracao continuam na tela, mas fora
+                            # do grafico: um limite em 330000 dividindo o eixo
+                            # com uma potencia de 18 W achata a curva que
+                            # alguem foi ali ver.
+                            'plotavel': plotavel(info),
                             # A unidade viaja junto do nome porque a leitura
                             # ja esta escalada: sem ela o numero certo
                             # aparece sem dizer do que e.
@@ -139,6 +141,7 @@ def _dados_do_dispositivo(device_id: str):
             'code': dp_code,
             'label': series['name'],
             'unit': series['unit'],
+            'plotavel': series['plotavel'],
             # Casas decimais = o proprio `scale` do Tuya, que na pratica e a
             # precisao do aparelho. Sem escala declarada nao ha precisao a
             # afirmar, e a tela decide pelo valor.

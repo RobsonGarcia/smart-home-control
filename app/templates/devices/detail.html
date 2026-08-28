@@ -222,7 +222,7 @@
 <div class="chart-container">
     <div class="chart-head">
         <h3>Histórico</h3>
-        <span class="muted" style="font-size: 12.5px;">últimas 100 leituras · clique na legenda para ocultar uma série</span>
+        <span class="muted" style="font-size: 12.5px;">últimas 100 leituras · só medições · clique na legenda para ocultar uma série</span>
     </div>
 
     <div id="dpsLegend" class="dps-legend"></div>
@@ -314,9 +314,19 @@ const EXPLICACOES = {
 // `dadosSeries` é reatribuído a cada atualização automática — por isso `let`.
 let dadosSeries = SERIES_INICIAIS;
 
+// O gráfico mostra MEDIÇÃO; ajuste e calibração ficam de fora dele. Um limite
+// de sobrepotência em 330000 e um coeficiente de calibração em 26657 dividem
+// o eixo Y com uma potência de 18 W e achatam a curva que alguém foi ali ver.
+// Isso não é do tipo do aparelho: a mesma tomada tem potência e coeficiente.
+// Nada some da tela — os DPs de ajuste continuam inteiros nos cartões de
+// "O que veio na última coleta", logo abaixo.
+const paraGrafico = () => dadosSeries.filter((s) => s.plotavel);
+
 // Cor por DP, a partir do código — não da posição no array. Ocultar uma série
-// não repinta as outras, e uma série nova não muda a cor das antigas.
-let CORES = coresDeSeries(dadosSeries, (s) => s.code);
+// não repinta as outras, e uma série nova não muda a cor das antigas. Só as
+// séries que viram linha entram na paleta: contar as de ajuste aqui faria a
+// nota de "além das 8 cores" falar de curvas que não existem.
+let CORES = coresDeSeries(paraGrafico(), (s) => s.code);
 const visiveis = {};
 dadosSeries.forEach((s) => { visiveis[s.code] = true; });
 
@@ -333,7 +343,7 @@ function montarLegenda() {
     const legenda = document.getElementById('dpsLegend');
     legenda.innerHTML = '';
 
-    dadosSeries.forEach((serie) => {
+    paraGrafico().forEach((serie) => {
         const item = document.createElement('span');
         item.className = 'dps-legend-item' + (visiveis[serie.code] === false ? ' off' : '');
         item.innerHTML =
@@ -359,9 +369,9 @@ function montarLegenda() {
 
 function desenhar() {
     const canvas = document.getElementById('deviceChart');
-    if (!canvas || !dadosSeries.length) return;
+    if (!canvas || !paraGrafico().length) return;
 
-    const datasets = dadosSeries
+    const datasets = paraGrafico()
         .filter((s) => visiveis[s.code] !== false)
         .map((s) => datasetDeSerie(
             s.label,
@@ -397,7 +407,9 @@ function montarDetalhes() {
         cab.className = 'dps-detail-header';
         const cor = document.createElement('span');
         cor.className = 'dps-color';
-        cor.style.backgroundColor = CORES[serie.code];
+        // DP de ajuste não tem curva; um ponto colorido sugeriria uma série
+        // que não está no gráfico.
+        cor.style.backgroundColor = CORES[serie.code] || COR_EXCEDENTE;
         const titulo = document.createElement('h4');
         titulo.textContent = serie.label;
         cab.appendChild(cor);
@@ -470,7 +482,7 @@ async function atualizar() {
     const dados = await apiGet('/devices/' + DEVICE_ID + '/api/estado');
 
     dadosSeries = dados.chart_data;
-    CORES = coresDeSeries(dadosSeries, (s) => s.code);
+    CORES = coresDeSeries(paraGrafico(), (s) => s.code);
     dadosSeries.forEach((s) => {
         if (visiveis[s.code] === undefined) visiveis[s.code] = true;
     });

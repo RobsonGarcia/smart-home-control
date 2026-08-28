@@ -21,7 +21,7 @@ from app.db import get_connection
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 # Lista, nao um script: conn.executescript() faz COMMIT implicito da
@@ -426,8 +426,19 @@ def _migracao_004(conn):
     _add_coluna(conn, "devices", "icon_url", "TEXT")
 
 
+def _migracao_006(conn):
+    """
+    product_id, para achar o perfil de DPs de quem a nuvem nao descreve.
+
+    O devices.json sempre trouxe esse campo e ele era descartado. Sem backfill:
+    ele se preenche na proxima importacao, e ate la app/modelos.py ainda acha
+    o perfil pelo `model`.
+    """
+    _add_coluna(conn, "devices", "product_id", "TEXT")
+
+
 MIGRACOES = {1: _migracao_001, 2: _migracao_002, 3: _migracao_003,
-             4: _migracao_004, 5: _migracao_005}
+             4: _migracao_004, 5: _migracao_005, 6: _migracao_006}
 
 
 def run_migrations(max_wait_seconds: int = 20) -> int:

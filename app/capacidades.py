@@ -21,7 +21,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from app.dps_mapping import DPS_POR_CATEGORIA, get_dp_info
+from app.dps_mapping import (DPS_POR_CATEGORIA, get_dp_info,
+                             mapping_do_device)
 from app.errors import ValidationError
 from app.escala import escalar_faixa, reverter_valor
 
@@ -209,15 +210,15 @@ class Acao:
 
 
 def _mapping(device) -> dict:
-    """mapping_json do device como dict — tolerante a nulo e a JSON quebrado."""
-    bruto = (device or {}).get("mapping_json")
-    if not bruto:
-        return {}
-    try:
-        dados = json.loads(bruto)
-    except (json.JSONDecodeError, TypeError):
-        return {}
-    return dados if isinstance(dados, dict) else {}
+    """
+    A especificação de DPs do aparelho.
+
+    Delega para `dps_mapping.mapping_do_device`, que resolve o `mapping_json`
+    do Tuya e, quando ele vem vazio, o perfil por modelo de `app/modelos.py` —
+    assim um aparelho que a nuvem não descreve ganha os mesmos controles que
+    qualquer outro.
+    """
+    return mapping_do_device(device)
 
 
 def _tipo_do_mapping(entrada: dict, code: str) -> str:

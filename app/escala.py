@@ -26,26 +26,13 @@ já entrega em unidade real (ver `app/solar/base.py`) — escalar de novo ali
 seria dividir duas vezes.
 """
 
-import json
 from typing import Any, Dict, Optional
 
-from app.dps_mapping import get_dp_info
+from app.dps_mapping import get_dp_info, mapping_do_device
 
 # Tipos do mapping que carregam número escalável. Boolean, Enum, String,
 # Bitmap e Raw passam intactos — não há o que dividir num on/off.
 _TIPOS_NUMERICOS = {"integer", "value"}
-
-
-def _mapping_de(device) -> dict:
-    """mapping_json do device como dict — tolerante a nulo e a JSON quebrado."""
-    bruto = (device or {}).get("mapping_json")
-    if not bruto:
-        return {}
-    try:
-        dados = json.loads(bruto)
-    except (json.JSONDecodeError, TypeError):
-        return {}
-    return dados if isinstance(dados, dict) else {}
 
 
 def escalas_do_device(device) -> Dict[str, int]:
@@ -62,7 +49,7 @@ def escalas_do_device(device) -> Dict[str, int]:
     de fato precisa ser convertido.
     """
     saida: Dict[str, int] = {}
-    mapping = _mapping_de(device)
+    mapping = mapping_do_device(device)
     if not mapping:
         return saida
 

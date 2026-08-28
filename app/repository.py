@@ -34,16 +34,17 @@ def insert_or_update_device(device_data: Dict[str, Any]) -> None:
         # coleta depende -- as leituras voltavam a ser gravadas cruas.
         cursor.execute("""
             INSERT INTO devices
-            (id, name, local_key, category, product_name, model, mapping_json,
-             icon_url, is_sub, parent_id, ip, protocol_version, source,
-             created_at, updated_at, local_id, comodo_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, name, local_key, category, product_name, model, product_id,
+             mapping_json, icon_url, is_sub, parent_id, ip, protocol_version,
+             source, created_at, updated_at, local_id, comodo_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name=excluded.name,
                 local_key=excluded.local_key,
                 category=excluded.category,
                 product_name=excluded.product_name,
                 model=excluded.model,
+                product_id=COALESCE(NULLIF(excluded.product_id, ''), product_id),
                 mapping_json=COALESCE(
                     NULLIF(NULLIF(excluded.mapping_json, '{}'), ''),
                     mapping_json),
@@ -61,6 +62,7 @@ def insert_or_update_device(device_data: Dict[str, Any]) -> None:
             device_data.get('category'),
             device_data.get('product_name'),
             device_data.get('model'),
+            device_data.get('product_id'),
             json.dumps(device_data.get('mapping', {})),
             device_data.get('icon'),
             1 if device_data.get('sub') else 0,
@@ -81,6 +83,65 @@ def insert_or_update_device(device_data: Dict[str, Any]) -> None:
             (device_id, enabled, poll_interval_seconds)
             VALUES (?, 1, ?)
         """, (device_data.get('id'), DEFAULT_POLL_INTERVAL_SECONDS))
+
+
+def registrar_descoberta(device_id: str, ip: str, name: str = None,
+                         local_key: str = None,
+                         protocol_version=None) -> bool:
+    """
+    Grava o que um broadcast da LAN descobriu. Devolve True se criou a linha.
+
+    Por que isto NAO usa insert_or_update_device: aquela funcao e para quem
+    sabe TUDO sobre o aparelho -- o devices.json, que traz categoria, modelo,
+    icone e a especificacao de DPs. O broadcast nao sabe nada disso. Passando
+    por la, o scan mandava category='', model='' e mapping={} e, na hora em
+    que ele finalmente acerta a linha certa (ver app/scanner.py), apagaria a
+    categoria e a especificacao de todo aparelho visivel na rede.
+
+    Entao o UPDATE aqui toca SO o que o broadcast realmente conhece: onde o
+    aparelho esta (ip), como falar com ele (local_key, protocol_version) e
+    quando foi visto. O que ele nao sabe, ele nao escreve -- inclusive
+    `source`, que por isso nao rebaixa para 'broadcast' um dispositivo que
+    veio do devices.json.
+
+    O nome so entra na CRIACAO: renomear um aparelho na tela nao pode ser
+    desfeito por uma varredura de rede.
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+        existe = cursor.execute("SELECT 1 FROM devices WHERE id = ?",
+                                (device_id,)).fetchone() is not None
+
+        if existe:
+            cursor.execute("""
+                UPDATE devices SET
+                    ip = COALESCE(?, ip),
+                    local_key = COALESCE(?, local_key),
+                    protocol_version = COALESCE(?, protocol_version),
+                    last_seen_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (ip, local_key, protocol_version, device_id))
+            return False
+
+        local_id, comodo_id = _placement_padrao(conn)
+        cursor.execute("""
+            INSERT INTO devices
+            (id, name, local_key, ip, protocol_version, source,
+             last_seen_at, created_at, updated_at, local_id, comodo_id)
+            VALUES (?, ?, ?, ?, ?, 'broadcast',
+                    CURRENT_TIMESTAMP, ?, ?, ?, ?)
+        """, (device_id, name or device_id, local_key, ip, protocol_version,
+              datetime.now(), datetime.now(), local_id, comodo_id))
+
+        # Mesma politica de insert_or_update_device: quem entra no inventario
+        # ja entra no coletor.
+        cursor.execute("""
+            INSERT OR IGNORE INTO monitor_configs
+            (device_id, enabled, poll_interval_seconds)
+            VALUES (?, 1, ?)
+        """, (device_id, DEFAULT_POLL_INTERVAL_SECONDS))
+        return True
 
 
 def get_device(device_id: str) -> Optional[Dict]:

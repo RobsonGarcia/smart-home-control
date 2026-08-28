@@ -14,6 +14,7 @@ A ordem de resolução é sempre a mesma, da fonte mais confiável para a menos:
   4. desiste e devolve "DP 3" — melhor um rótulo neutro do que um errado
 """
 
+import json
 from typing import Dict, Optional
 
 from app.solar.base import CANAIS_SOLAR
@@ -38,7 +39,15 @@ DPS_NOMEADOS: Dict[str, dict] = {
     "add_ele_1": {"name": "Energia acumulada — canal 1", "unit": "kWh", "type": "numeric"},
     "add_ele_2": {"name": "Energia acumulada — canal 2", "unit": "kWh", "type": "numeric"},
     "add_ele_3": {"name": "Energia acumulada — canal 3", "unit": "kWh", "type": "numeric"},
-    "forward_energy_total": {"name": "Energia total", "unit": "kWh", "type": "numeric"},
+    "forward_energy_total": {"name": "Energia total — sentido direto", "unit": "kWh", "type": "numeric"},
+
+    # Energia no sentido REVERSO. Um medidor bidirecional conta os dois lados
+    # separadamente: sem estes códigos, a energia que volta para a rede seria
+    # somada à consumida, que é o oposto do que ela significa.
+    "add_ele_rev_1": {"name": "Energia reversa — canal 1", "unit": "kWh", "type": "numeric"},
+    "add_ele_rev_2": {"name": "Energia reversa — canal 2", "unit": "kWh", "type": "numeric"},
+    "add_ele_rev_3": {"name": "Energia reversa — canal 3", "unit": "kWh", "type": "numeric"},
+    "reverse_energy_total": {"name": "Energia total — sentido reverso", "unit": "kWh", "type": "numeric"},
 
     # Energia — instantânea
     "cur_power": {"name": "Potência", "unit": "W", "type": "numeric"},
@@ -53,6 +62,41 @@ DPS_NOMEADOS: Dict[str, dict] = {
     "cur_voltage_1": {"name": "Voltagem — canal 1", "unit": "V", "type": "numeric"},
     "cur_voltage_2": {"name": "Voltagem — canal 2", "unit": "V", "type": "numeric"},
     "cur_voltage_3": {"name": "Voltagem — canal 3", "unit": "V", "type": "numeric"},
+
+    # Fator de potência: adimensional de propósito — é uma razão, e escrever
+    # uma unidade ao lado dela seria inventar grandeza.
+    "power_factor": {"name": "Fator de potência", "unit": "", "type": "numeric"},
+    "power_factor_1": {"name": "Fator de potência — canal 1", "unit": "", "type": "numeric"},
+    "power_factor_2": {"name": "Fator de potência — canal 2", "unit": "", "type": "numeric"},
+    "power_factor_3": {"name": "Fator de potência — canal 3", "unit": "", "type": "numeric"},
+
+    # Sentido do fluxo, num medidor bidirecional.
+    "direction_1": {"name": "Sentido — canal 1", "unit": "sentido", "type": "enum"},
+    "direction_2": {"name": "Sentido — canal 2", "unit": "sentido", "type": "enum"},
+
+    # Limites e chaves de alarme de um medidor. Os de tensão têm unidade
+    # verificada; os de corrente e potência ficam sem, porque a escala deles
+    # não foi conferida no aparelho (ver app/modelos.py).
+    "ov_threshold": {"name": "Limite de sobretensão", "unit": "V", "type": "numeric"},
+    "uv_threshold": {"name": "Limite de subtensão", "unit": "V", "type": "numeric"},
+    "oc_threshold_1": {"name": "Limite de sobrecorrente — canal 1", "unit": "", "type": "numeric"},
+    "oc_threshold_2": {"name": "Limite de sobrecorrente — canal 2", "unit": "", "type": "numeric"},
+    "op_threshold_1": {"name": "Limite de sobrepotência — canal 1", "unit": "", "type": "numeric"},
+    "op_threshold_2": {"name": "Limite de sobrepotência — canal 2", "unit": "", "type": "numeric"},
+    "report_rate": {"name": "Intervalo de envio", "unit": "s", "type": "numeric"},
+    "buz_enable": {"name": "Aviso sonoro", "unit": "on/off", "type": "boolean"},
+    "ov_enable": {"name": "Alarme de sobretensão", "unit": "on/off", "type": "boolean"},
+    "uv_enable": {"name": "Alarme de subtensão", "unit": "on/off", "type": "boolean"},
+    "oc_enable_1": {"name": "Alarme de sobrecorrente — canal 1", "unit": "on/off", "type": "boolean"},
+    "oc_enable_2": {"name": "Alarme de sobrecorrente — canal 2", "unit": "on/off", "type": "boolean"},
+    "op_enable_1": {"name": "Alarme de sobrepotência — canal 1", "unit": "on/off", "type": "boolean"},
+    "op_enable_2": {"name": "Alarme de sobrepotência — canal 2", "unit": "on/off", "type": "boolean"},
+    "ov_status": {"name": "Sobretensão detectada", "unit": "on/off", "type": "boolean"},
+    "uv_status": {"name": "Subtensão detectada", "unit": "on/off", "type": "boolean"},
+    "oc_status_1": {"name": "Sobrecorrente — canal 1", "unit": "on/off", "type": "boolean"},
+    "oc_status_2": {"name": "Sobrecorrente — canal 2", "unit": "on/off", "type": "boolean"},
+    "op_status_1": {"name": "Sobrepotência — canal 1", "unit": "on/off", "type": "boolean"},
+    "op_status_2": {"name": "Sobrepotência — canal 2", "unit": "on/off", "type": "boolean"},
 
     # Sensores
     "va_temperature": {"name": "Temperatura", "unit": "°C", "type": "numeric"},
@@ -143,6 +187,37 @@ DPS_ENERGIA_NUMERICOS: Dict[str, str] = {
 
 DESCONHECIDO = {"name": None, "unit": "valor", "type": "unknown"}
 
+# --------------------------------------------------------------------------
+# O que NÃO vira curva no gráfico de histórico.
+#
+# A pergunta que separa não é "de que tipo é o aparelho" — é "isto é uma
+# grandeza medida, que muda sozinha ao longo do tempo?". A mesma tomada tem
+# potência (medição) e coeficiente de calibração (ajuste), e o mesmo medidor
+# tem tensão e limite de sobretensão. Os dois convivem em qualquer categoria.
+#
+# Por que importa: um limite de sobrepotência em 330000 e um coeficiente em
+# 26657 dividem o eixo Y com uma potência de 18 W, e achatam a curva que
+# alguém foi ali ver. Nada some da tela — os DPs de ajuste continuam inteiros
+# no cartão "O que veio na última coleta"; eles só não ganham linha.
+#
+# A maioria dos ajustes já cai fora sozinha por não ser `numeric` (todo
+# `*_coe` resolve para tipo desconhecido, e chave e enum não são número).
+# Esta lista é para os que SÃO numéricos e ainda assim são configuração.
+# --------------------------------------------------------------------------
+DPS_DE_AJUSTE = {
+    "countdown_1", "countdown_2", "countdown_3", "countdown_4",
+    "report_rate",
+    "ov_threshold", "uv_threshold",
+    "oc_threshold_1", "oc_threshold_2",
+    "op_threshold_1", "op_threshold_2",
+}
+
+
+def plotavel(info: dict) -> bool:
+    """Se este DP merece uma linha no gráfico de histórico."""
+    return (info.get("type") == "numeric"
+            and info.get("code") not in DPS_DE_AJUSTE)
+
 
 def _codigo_nomeado(dps_code: str, category: Optional[str],
                     mapping: Optional[dict]) -> Optional[str]:
@@ -165,6 +240,32 @@ def _codigo_nomeado(dps_code: str, category: Optional[str],
 
     # 4. numérico de energia, estável entre categorias.
     return DPS_ENERGIA_NUMERICOS.get(dps_code)
+
+
+def mapping_do_device(device) -> dict:
+    """
+    A especificação de DPs de um aparelho — a do Tuya, ou a do perfil dele.
+
+    Ponto único porque antes eram cinco: o mesmo `json.loads` com o mesmo
+    try/except aparecia em capacidades, escala e nas duas rotas, e cada um
+    teria que aprender sozinho sobre perfis.
+
+    A ordem é a de sempre, da fonte mais confiável para a menos: o
+    `mapping_json` que veio do Tuya manda; quando ele vem vazio — porque a
+    nuvem não descreve aquele produto — vale o perfil de `app/modelos.py`.
+    """
+    dados = (device or {}).get("mapping_json")
+    if dados:
+        try:
+            mapping = json.loads(dados)
+        except (json.JSONDecodeError, TypeError):
+            mapping = None
+        if isinstance(mapping, dict) and mapping:
+            return mapping
+
+    from app.modelos import mapping_do_produto
+    return mapping_do_produto((device or {}).get("product_id"),
+                              (device or {}).get("model")) or {}
 
 
 def _spec_do_mapping(dps_code: str, mapping: Optional[dict]) -> dict:
