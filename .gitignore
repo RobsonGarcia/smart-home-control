@@ -20,10 +20,19 @@ devices.json
 # Credenciais da API do inversor solar (sonda/configurador)
 solar.local.json
 
+# Credenciais da nuvem Tuya (transporte de comando alternativo)
+tuya.local.json
+
+# Usuario/senha das cameras, para a sonda ONVIF
+camera.local.json
+
 # JSONs de apoio da coleta
 snapshot.json
 tuya-raw.json
 dados_casa_inteligente.json
+
+# Segmentos de video HLS: temporarios, de uma sessao aberta agora
+data/hls/
 
 # Bancos de dados, em qualquer lugar da árvore
 *.db

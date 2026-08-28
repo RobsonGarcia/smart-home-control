@@ -19,14 +19,39 @@ Um sistema completo para descobrir, inventariar e monitorar dispositivos Tuya co
 - `devices.json` obtido do seu painel Tuya Cloud (via `tinytuya wizard`)
 - Dispositivos Tuya compatíveis com protocolo local LAN
 
+## ⚡ Começar Rápido
+
+1. Clone/navegue para a pasta do projeto
+2. Crie um ambiente virtual: `python -m venv venv`
+3. Ative o venv (veja seção 0 da Instalação abaixo)
+4. Siga o restante das instruções — **sempre com venv ativado e na pasta do projeto**
+
 ## 🚀 Instalação e Setup
+
+### 0. Preparar ambiente Python (venv)
+
+Navegue até a pasta do projeto e crie um ambiente virtual isolado:
+
+```bash
+# Estar na pasta raiz do projeto
+python -m venv venv
+
+# Ativar o ambiente virtual
+# Windows (PowerShell):
+venv\Scripts\Activate.ps1
+# Windows (cmd):
+venv\Scripts\activate.bat
+# Linux/Mac:
+source venv/bin/activate
+```
+
+Você saberá que está ativo quando o prompt mostrar `(venv)` no início.
 
 ### 1. Preparar arquivo de credenciais (se ainda não tem)
 
-Se ainda não tem um `devices.json`, gere-o uma única vez:
+Se ainda não tem um `devices.json`, gere-o uma única vez (com venv ativado):
 
 ```bash
-cd d:\dev\tinyTuya
 python -m tinytuya wizard
 ```
 
@@ -34,12 +59,15 @@ Siga o assistente para criar `tinytuya.json` com suas credenciais Tuya (API key,
 
 ### 2. Instalar dependências
 
+Com o venv ativado, na pasta raiz do projeto:
+
 ```bash
-cd d:\dev\tinyTuya
 pip install -r requirements.txt
 ```
 
 ### 3. Inicializar banco de dados
+
+Na pasta do projeto com venv ativado:
 
 ```bash
 python -c "from app.db import init_db; from app.inventory import import_devices_from_json; init_db(); import_devices_from_json()"
@@ -51,7 +79,7 @@ Isso vai:
 
 ### 4. Rodar o painel web
 
-Em uma aba de terminal:
+Em uma aba de terminal (com venv ativado, na pasta do projeto):
 
 ```bash
 python run_web.py
@@ -61,7 +89,7 @@ O painel estará disponível em: **http://localhost:8000**
 
 ### 5. (Opcional) Rodar coleta em background
 
-Em outra aba de terminal:
+Em outra aba de terminal (com venv ativado, na pasta do projeto):
 
 ```bash
 python run_collector.py
@@ -229,9 +257,66 @@ da API cloud do fabricante do inversor. Fabricante suportado hoje: **SolPlanet
   [docs/NOVO_FABRICANTE_SOLAR.md](docs/NOVO_FABRICANTE_SOLAR.md).
 - **Credenciais**: ficam apenas no `data/app.db` (fora do repositório). Para
   testar a API antes de configurar, use `python scripts/sonda_solplanet.py`
-  com um `solar.local.json` na raiz (gitignorado):
+  (com venv ativado, na pasta do projeto) com um `solar.local.json` na raiz (gitignorado):
   `{"appkey": "...", "appsecret": "...", "token": "...", "planta_apikey": "...", "regiao": "ap", "nivel_acesso": "comum"}`
   (token só é obrigatório no Pro; `planta_apikey` é obrigatório sem token).
+
+## 🎛️ Acionamento (ligar e desligar)
+
+O painel também **aciona**, não só observa — e a descoberta do que cada
+aparelho aceita não custa chamada de rede nenhuma: ela sai do `mapping_json`
+que já veio com o dispositivo (a especificação que o Tuya Cloud publica sobre
+aquele produto). `app/capacidades.py` traduz isso para um vocabulário nosso:
+tipos (`interruptor`, `tomada`, `luz`, `câmera`, `sensor`, `fechadura`…) e
+ações (`switch_1` → "Interruptor 1", `ptz_control` → "Mover câmera").
+
+- **Ninguém nasce acionável.** Cada dispositivo tem uma chave *Permitir
+  acionamento*, desligada por padrão — inclusive depois de um scan. Enquanto
+  ela estiver desligada, a tela desabilita os botões **e a API recusa**.
+- **Confirmação por dispositivo**: a chave *Pedir confirmação* (ligada por
+  padrão) mostra um diálogo antes de cada comando. Desligue-a nas luzes;
+  deixe-a ligada nas bombas.
+- **Fechaduras ficam de fora**, por código. `unlock_*` e `reply_unlock_request`
+  estão na lista de bloqueadas e nem aparecem — destrancar porta não é botão
+  de painel.
+- **Dois caminhos de comando**: LAN (tinytuya, exige IP e local_key) e nuvem
+  Tuya (`tuya.local.json`, para quem não tem IP e para os infravermelhos). O
+  painel escolhe o primeiro disponível e a tela diz qual é.
+- Toda tentativa — sucesso e falha — fica no `command_log`, visível em
+  *Últimas ações* na tela do dispositivo.
+
+A validação vive no servidor: existe → tem opt-in → a ação é declarada pelo
+aparelho → o valor cabe na faixa. Um POST direto na API passa pelas mesmas
+quatro portas.
+
+## 📹 Câmeras
+
+O Tuya entrega tudo de uma câmera **menos a imagem**: PTZ, sirene, holofote,
+visão noturna e privacidade são DPs comuns e usam o acionamento acima. A
+imagem vem de outro caminho, configurado em *Câmeras → Configurar vídeo*:
+
+- **ONVIF** (padrão aberto, rede local): o painel descobre perfis, foto e
+  vídeo sozinho. Há um botão *Descobrir na rede* que usa WS-Discovery.
+- **RTSP com URL manual**: para câmera que transmite mas não fala ONVIF —
+  comum em firmware Tuya, geralmente em `rtsp://IP:6554/stream_0`.
+
+Antes de configurar, rode a sonda **na rede das câmeras**; é ela que diz qual
+caminho existe (com venv ativado, na pasta do projeto):
+
+```bash
+python scripts/sonda_onvif.py --usuario admin --senha ****
+```
+
+O vídeo ao vivo é HLS gerado pelo próprio painel (um processo de ffmpeg por
+câmera, encerrado sozinho ~30 s depois que você fecha a página). O ffmpeg vem
+do pacote `imageio-ffmpeg`, instalado pelo `requirements.txt` — não é preciso
+instalar ffmpeg no sistema. Sem ele, a tela cai para uma foto nova a cada 2 s
+e avisa.
+
+O usuário e a senha da câmera (ONVIF/RTSP) **não são** os da sua conta no app
+do fabricante: são credenciais próprias do aparelho. Ficam só no banco local e
+nunca aparecem em resposta de API. Fonte de vídeo nova: veja
+[docs/NOVA_FONTE_VIDEO.md](docs/NOVA_FONTE_VIDEO.md).
 
 ## 🔌 DPs Comuns em Medidores de Energia
 
@@ -259,7 +344,7 @@ SCAN_TIMEOUT_SECONDS = 15                   # Timeout máximo de um scan de rede
 
 ### Reiniciar o Collector
 
-Se você parou o collector (`Ctrl+C`) e quer reiniciar:
+Se você parou o collector (`Ctrl+C`) e quer reiniciar (com venv ativado, na pasta do projeto):
 
 ```bash
 python run_collector.py

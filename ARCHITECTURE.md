@@ -297,6 +297,50 @@ Princípios:
 O passo a passo para adicionar um fabricante está em
 [docs/NOVO_FABRICANTE_SOLAR.md](docs/NOVO_FABRICANTE_SOLAR.md).
 
+## 🎛️ Capacidades: tipos e ações
+
+`app/capacidades.py` é para comandos o que `app/solar/base.py` é para
+grandezas: o vocabulário do sistema, não o do fabricante.
+
+- **Descoberta na leitura, não no cadastro.** `acoes_do_dispositivo(device)`
+  deriva as capacidades do `mapping_json` daquele aparelho toda vez que a tela
+  abre. Não existe estado de "descoberta" para ficar desatualizado: reimportou
+  o inventário e o aparelho passou a declarar um DP novo, o botão aparece.
+  Sem mapping (aparelho achado só no broadcast da LAN), cai na tabela por
+  categoria de `dps_mapping.py`.
+- **Segurança por exclusão**: o que não está em `ACOES` não vira botão, e o que
+  está em `BLOQUEADAS` — ou pertence a uma fechadura — não vira botão nem
+  estando em `ACOES`.
+- **Transporte é plugável** (`app/control/`): `Transporte` (ABC) com LAN
+  (tinytuya) e nuvem Tuya. A rota pede um transporte para o dispositivo; qual
+  deles atende não é problema dela.
+- **As quatro barreiras**, em `app/control/servico.py` e nessa ordem: o
+  dispositivo existe → tem `acionavel = 1` → a ação está entre as declaradas →
+  o valor cabe no tipo e na faixa. Só então há pacote na rede.
+- **A leitura pós-comando não mente.** Depois de acionar, o estado novo é
+  gravado como leitura para a tela não esperar o coletor. Uma resposta parcial
+  (só o DP que mudou) é mesclada sobre o último quadro conhecido **apenas se
+  ele for recente**: mesclar um quadro de horas atrás e carimbá-lo com
+  `collected_at` de agora sujaria os gráficos de energia.
+
+## 📹 Vídeo
+
+`app/cameras/` cobre **só a imagem**. PTZ, sirene, holofote e visão noturna são
+DPs Tuya e passam pelo acionamento comum — a câmera não é um caso especial de
+dispositivo, é um dispositivo com uma capacidade a mais.
+
+- `FonteVideo` (ABC) + drivers `onvif` (SOAP montado à mão sobre `requests`,
+  sem dependência nova) e `rtsp` (URL manual). Registro em `DRIVERS_VIDEO`.
+- `midia.py` administra o ffmpeg: um processo por câmera, `-c:v copy` quando dá
+  (CPU perto de zero), transcodificação só quando o fluxo não pode ser
+  reembalado, e **encerramento por inatividade** — sem ele, cada câmera aberta
+  uma vez deixaria um ffmpeg vivo para sempre.
+- A URL RTSP carrega usuário e senha embutidos: ela nunca vai para o
+  navegador. O que sai do painel é HLS servido por ele mesmo.
+
+O passo a passo para adicionar uma fonte de vídeo está em
+[docs/NOVA_FONTE_VIDEO.md](docs/NOVA_FONTE_VIDEO.md).
+
 ## 🌐 Fluxo Web
 
 ### GET /devices
@@ -385,8 +429,11 @@ new Chart(ctx, {
 ```python
 import tinytuya
 device = tinytuya.OutletDevice(
-    dev_id="ebd65a07b2543ff36fhklt",
-    address="192.168.3.72",
+    dev_id="eb0000000000000000xxxx",
+    address="192.168.0.72",
+    # A local_key REAL sai do inventario (devices.local_key) em tempo de
+    # execucao. Nunca em documentacao, commit ou log: com ela, quem estiver
+    # na mesma rede controla o aparelho.
     local_key="<local_key do aparelho>"
 )
 device.set_version(3.4)
@@ -409,11 +456,12 @@ status = device.status()
 
 ```python
 results = tinytuya.deviceScan(verbose=False, maxretry=1)
-# Retorna:
+# Retorna (valores de exemplo -- a local_key REAL nunca entra em documentacao,
+# commit ou log: com ela, quem estiver na mesma rede controla o aparelho):
 # {
-#     'ebd65a07b2543ff36fhklt': {
-#         'name': 'Camera Garagem 1',
-#         'ip': '192.168.3.72',
+#     'eb0000000000000000xxxx': {
+#         'name': 'Camera da Garagem',
+#         'ip': '192.168.0.72',
 #         'ver': 3.4,
 #         'key': '<local_key do aparelho>',
 #         ...
@@ -551,14 +599,14 @@ assert len(devices) == 27
 ```python
 # Manualmente, marcar 1 device para monitorar
 from app.repository import get_or_create_monitor_config
-config = get_or_create_monitor_config("ebd65a07b2543ff36fhklt", 60)
+config = get_or_create_monitor_config("eb0000000000000000xxxx", 60)
 
 # Rodar collector por 2 minutos
 python run_collector.py  # Ctrl+C após 2 min
 
 # Verificar dados
 from app.repository import get_latest_reading
-reading = get_latest_reading("ebd65a07b2543ff36fhklt")
+reading = get_latest_reading("eb0000000000000000xxxx")
 assert reading is not None
 assert reading['online'] == 1
 ```

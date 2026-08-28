@@ -21,7 +21,7 @@ from app.db import get_connection
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 # Lista, nao um script: conn.executescript() faz COMMIT implicito da
@@ -241,7 +241,118 @@ def _migracao_002(conn):
         conn.execute(ddl)
 
 
-MIGRACOES = {1: _migracao_001, 2: _migracao_002}
+_DDL_CONTROLE = [
+    # Vinculo de VIDEO de um dispositivo. A camera em si ja e uma linha em
+    # devices (source='cloud', category='sp'); aqui fica so o que o Tuya nao
+    # entrega: como chegar na imagem. Credenciais da camera ficam no banco
+    # pelo mesmo motivo das solares -- e nunca saem em log ou resposta.
+    """CREATE TABLE IF NOT EXISTS cameras (
+        device_id TEXT PRIMARY KEY REFERENCES devices(id),
+        driver TEXT NOT NULL,
+        host TEXT,
+        porta INTEGER,
+        credenciais_json TEXT,
+        perfil_token TEXT,
+        perfil_nome TEXT,
+        snapshot_uri TEXT,
+        stream_uri TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""",
+    # Auditoria de acionamento: o que foi mandado, por onde, e se funcionou.
+    # E a unica memoria de que alguem desligou a bomba as 3h da manha.
+    """CREATE TABLE IF NOT EXISTS command_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id TEXT NOT NULL,
+        dp TEXT NOT NULL,
+        code TEXT,
+        valor_json TEXT,
+        transporte TEXT,
+        origem TEXT NOT NULL DEFAULT 'painel',
+        ok INTEGER NOT NULL DEFAULT 0,
+        erro TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""",
+    """CREATE INDEX IF NOT EXISTS idx_command_log_device
+        ON command_log(device_id, created_at DESC)""",
+]
+
+
+def _reconstruir_devices_controle(conn):
+    """
+    Recria devices com as tres colunas de controle e com source='camera'.
+
+    As colunas dariam para adicionar por ALTER, mas o CHECK de source nao --
+    e uma camera ONVIF de outra marca, achada na descoberta, precisa poder
+    virar linha em devices sem conta Tuya nenhuma. Como a tabela tem que ser
+    recriada de qualquer forma, as colunas nascem junto. Mesmo procedimento
+    de _reconstruir_devices: sem ALTER TABLE RENAME, dados pelo Python.
+    """
+    ddl_atual = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'devices'"
+    ).fetchone()[0]
+    if "'camera'" in ddl_atual:
+        return  # banco novo: schema.sql ja criou no formato certo
+
+    colunas = ("id, name, local_key, category, product_name, model, "
+               "mapping_json, is_sub, parent_id, ip, protocol_version, "
+               "last_seen_at, local_id, comodo_id, source, created_at, "
+               "updated_at")
+    linhas = conn.execute("SELECT %s FROM devices" % colunas).fetchall()
+
+    conn.execute("DROP TABLE devices")
+    conn.execute("""
+        CREATE TABLE devices (
+            id TEXT PRIMARY KEY NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            local_key TEXT,
+            category TEXT,
+            product_name TEXT,
+            model TEXT,
+            mapping_json TEXT,
+            is_sub INTEGER DEFAULT 0,
+            parent_id TEXT,
+            ip TEXT,
+            protocol_version REAL DEFAULT 3.4,
+            last_seen_at TIMESTAMP,
+            local_id INTEGER REFERENCES locais(id),
+            comodo_id INTEGER REFERENCES comodos(id),
+            source TEXT DEFAULT 'cloud'
+                CHECK(source IN ('cloud', 'broadcast', 'solar', 'camera')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            tipo_manual TEXT,
+            acionavel INTEGER NOT NULL DEFAULT 0,
+            confirmar_acao INTEGER NOT NULL DEFAULT 1,
+            UNIQUE(id)
+        )
+    """)
+    conn.executemany(
+        "INSERT INTO devices (%s) VALUES (%s)"
+        % (colunas, ", ".join(["?"] * 17)),
+        [tuple(r) for r in linhas],
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_devices_local_comodo"
+                 " ON devices(local_id, comodo_id)")
+    logger.info("migração: devices recriada com controle e source='camera'"
+                " (%d dispositivos preservados)", len(linhas))
+
+
+def _migracao_003(conn):
+    """
+    Acionamento e câmeras.
+
+    Ninguém nasce acionável: `acionavel` entra com 0 para TODOS os aparelhos
+    já existentes, inclusive as bombas. Ligar a chave é uma decisão por
+    dispositivo, na tela — não um efeito colateral de atualizar o painel.
+    """
+    _reconstruir_devices_controle(conn)
+    for ddl in _DDL_CONTROLE:
+        conn.execute(ddl)
+
+
+MIGRACOES = {1: _migracao_001, 2: _migracao_002, 3: _migracao_003}
 
 
 def run_migrations(max_wait_seconds: int = 20) -> int:

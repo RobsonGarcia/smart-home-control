@@ -30,6 +30,7 @@
     <div class="page-head-text">
         <div style="display: flex; align-items: center; gap: 12px;">
             {{ m.badge(e) }}
+            {{ m.selo_tipo(device_status) }}
             <span class="mono muted">{{ device_status.device.id }}</span>
         </div>
         <h1>{{ device_status.device.name }}</h1>
@@ -47,11 +48,145 @@
     </div>
 </div>
 
+{# ------------------------------------------------------------ controles #}
+<div class="card" style="margin-bottom: 22px;">
+    <div class="chart-head" style="margin-bottom: 14px;">
+        <h3 style="margin: 0;">Controles</h3>
+        <span class="muted" style="font-size: 12.5px;">
+            {{ device_status.tipo_rotulo }} · descoberto do próprio aparelho
+        </span>
+    </div>
+
+    <div class="chave-acionamento">
+        <span class="texto">
+            <strong>Permitir acionamento</strong>
+            Enquanto esta chave estiver desligada, o painel só observa: os comandos
+            ficam desabilitados aqui e a API recusa qualquer um.
+        </span>
+        <span class="chaves">
+            <span class="chave">
+                <span class="toggle {% if device_status.acionavel %}on{% endif %}"
+                      role="switch" aria-checked="{{ 'true' if device_status.acionavel else 'false' }}"
+                      onclick="alternarAcionavel(this)"><span class="knob"></span></span>
+                Acionar
+            </span>
+            <span class="chave">
+                <span class="toggle {% if device_status.confirmar_acao %}on{% endif %}"
+                      role="switch" aria-checked="{{ 'true' if device_status.confirmar_acao else 'false' }}"
+                      onclick="alternarConfirmacao(this)"><span class="knob"></span></span>
+                Pedir confirmação
+            </span>
+        </span>
+    </div>
+
+    {% if not acoes %}
+    <div class="controles-bloqueado">
+        <strong>Este aparelho não expõe nenhum comando.</strong><br>
+        {% if device_status.tipo == 'fechadura' %}
+            Fechaduras ficam fora do acionamento por decisão de projeto — destrancar
+            porta não é botão de painel.
+        {% else %}
+            Ou ele só reporta medições, ou o inventário ainda não trouxe a
+            especificação de DPs dele (reimporte o <span class="mono">devices.json</span>
+            ou escaneie a rede).
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="controles">
+        {% for a in acoes %}
+        <div class="controle {{ a.classe }}">
+            <div class="linha">
+                <span>
+                    <span class="nome">{{ a.nome }}</span><br>
+                    <span class="codigo">{{ a.code }} · DP {{ a.dp }}</span>
+                </span>
+                {% if a.tipo == 'boolean' %}
+                {% set ligado = a.valor is sameas true %}
+                <button type="button" class="btn-poder{{ ' on' if ligado }}"
+                        {% if not device_status.acionavel %}disabled{% endif %}
+                        title="{{ 'Ligado' if ligado else 'Desligado' }}"
+                        data-nome='{{ device_status.device.name }}' data-acao='{{ a.nome }}'
+                        data-confirmar="{{ 1 if device_status.confirmar_acao else 0 }}"
+                        onclick="acionar(this, DEVICE_ID, '{{ a.dp }}', {{ 'false' if ligado else 'true' }})">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M12 4.5v6.8"/><path d="M17.3 7a7 7 0 1 1-10.6 0"/></svg>
+                </button>
+                {% endif %}
+            </div>
+
+            {% if a.tipo == 'enum' %}
+            <select {% if not device_status.acionavel %}disabled{% endif %}
+                    data-nome='{{ device_status.device.name }}' data-acao='{{ a.nome }}'
+                    data-confirmar="{{ 1 if device_status.confirmar_acao else 0 }}"
+                    onchange="acionar(this, DEVICE_ID, '{{ a.dp }}', this.value)">
+                {% if a.valor is none %}<option value="" selected disabled>— escolher —</option>{% endif %}
+                {% for o in a.opcoes %}
+                <option value="{{ o.valor }}" {% if a.valor is not none and o.valor == a.valor|string %}selected{% endif %}>{{ o.rotulo }}</option>
+                {% endfor %}
+            </select>
+            {% elif a.tipo == 'integer' %}
+            <div class="linha">
+                <input type="number" id="in-{{ a.dp }}"
+                       value="{{ a.valor if a.valor is not none else (a.valores.min or 0) }}"
+                       min="{{ a.valores.min if a.valores.min is not none else '' }}"
+                       max="{{ a.valores.max if a.valores.max is not none else '' }}"
+                       step="{{ a.valores.step or 1 }}"
+                       {% if not device_status.acionavel %}disabled{% endif %}>
+                <button type="button" class="btn btn-small"
+                        {% if not device_status.acionavel %}disabled{% endif %}
+                        data-nome='{{ device_status.device.name }}' data-acao='{{ a.nome }}'
+                        data-confirmar="{{ 1 if device_status.confirmar_acao else 0 }}"
+                        onclick="acionar(this, DEVICE_ID, '{{ a.dp }}', parseInt(document.getElementById('in-{{ a.dp }}').value, 10))">Aplicar</button>
+            </div>
+            {% elif a.tipo == 'boolean' %}
+            <span class="valor-atual">{{ 'ligado' if a.valor is sameas true else ('desligado' if a.valor is sameas false else 'estado desconhecido') }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <p class="dim" style="font-size: 12px; margin: 14px 0 0;">
+        Caminho do comando:
+        {%- for t in transportes %}
+        <span class="mono">{{ t.rotulo }}</span>
+        {%- if t.ok %} <span style="color: var(--online-text);">disponível</span>
+        {%- else %} <span class="dim">indisponível ({{ t.motivo }})</span>{% endif %}
+        {%- if not loop.last %} · {% endif %}
+        {%- endfor %}
+    </p>
+</div>
+
+{% if comandos %}
+<div class="card" style="margin-bottom: 22px;">
+    <h3 style="margin-top: 0;">Últimas ações</h3>
+    <ul class="log-acoes">
+        {% for c in comandos %}
+        <li>
+            <span class="quando" data-tempo="{{ c.created_at }}">—</span>
+            <span>
+                {{ c.code or c.dp }} = <span class="mono">{{ c.valor }}</span>
+                <span class="dim">· {{ c.transporte or '?' }} · {{ c.origem }}</span>
+                {% if not c.ok %}<span class="falhou">· falhou: {{ c.erro }}</span>{% endif %}
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 <div class="device-info">
     <div class="info-card">
         <h3>Informações</h3>
         <p><strong>Modelo:</strong> {{ device_status.device.model or '—' }}</p>
         <p><strong>Categoria:</strong> {{ device_status.device.category or '—' }}</p>
+        <p><strong>Tipo:</strong>
+            <select onchange="definirTipo(this.value)" class="select-inline">
+                <option value="" {% if not device_status.device.tipo_manual %}selected{% endif %}>Automático ({{ device_status.tipo_rotulo }})</option>
+                {% for chave, t in tipos.items() %}
+                <option value="{{ chave }}" {% if device_status.device.tipo_manual == chave %}selected{% endif %}>{{ t.rotulo }}</option>
+                {% endfor %}
+            </select>
+        </p>
         <p><strong>Origem:</strong> {{ device_status.device.source }}</p>
         <p><strong>Local:</strong>
             {% if device_status.local %}
@@ -101,6 +236,47 @@
 {% block extra_js %}
 <script>
 const dadosSeries = {{ chart_data|safe }};
+const DEVICE_ID = '{{ device_status.device.id }}';
+
+async function alternarAcionavel(el) {
+    const ligando = !el.classList.contains('on');
+    if (ligando) {
+        const ok = await confirmar(
+            'Liberar o acionamento de "{{ device_status.device.name }}"? '
+            + 'A partir daí o painel pode ligar e desligar este aparelho de verdade.',
+            { titulo: 'Permitir acionamento', rotulo: 'Liberar' });
+        if (!ok) return;
+    }
+    el.classList.toggle('on');
+    try {
+        const r = await apiPost('/devices/' + DEVICE_ID + '/acionavel');
+        toastOk(r.acionavel ? 'Acionamento liberado' : 'Acionamento bloqueado');
+        recarregar(700);
+    } catch (erro) {
+        el.classList.toggle('on');
+        toastErro(erro.message);
+    }
+}
+
+async function alternarConfirmacao(el) {
+    el.classList.toggle('on');
+    try {
+        const r = await apiPost('/devices/' + DEVICE_ID + '/confirmar_acao');
+        toastOk(r.confirmar_acao ? 'Vai pedir confirmação' : 'Não vai mais pedir confirmação');
+        recarregar(700);
+    } catch (erro) {
+        el.classList.toggle('on');
+        toastErro(erro.message);
+    }
+}
+
+async function definirTipo(valor) {
+    await executar(
+        () => apiPost('/devices/' + DEVICE_ID + '/tipo', { tipo: valor || null }),
+        null,
+        (d) => { toastOk('Tipo: ' + d.tipo); recarregar(700); }
+    );
+}
 
 const EXPLICACOES = {
     "1": "Interruptor 1 — estado on/off",

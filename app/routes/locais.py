@@ -4,6 +4,7 @@ from fastapi import APIRouter, Body, Request
 from fastapi.responses import HTMLResponse
 
 from app.errors import NotFoundError
+from app.capacidades import enriquecer_grupos
 from app.repository import (
     # Sentinela do repository: deixa o PUT distinguir "campo ausente" de
     # "campo enviado como null" (null em descricao/rede_cidr significa limpar).
@@ -44,7 +45,7 @@ async def locais_list(request: Request):
     template = request.app.templates.get_template("locais/list.html")
     return template.render(
         request=request,
-        grupos=get_devices_grouped_by_local(),
+        grupos=enriquecer_grupos(get_devices_grouped_by_local()),
     )
 
 
@@ -58,7 +59,7 @@ async def local_detail(local_id: int, request: Request):
             status_code=404,
         )
 
-    grupos = get_devices_grouped_by_local(local_id=local_id)
+    grupos = enriquecer_grupos(get_devices_grouped_by_local(local_id=local_id))
     template = request.app.templates.get_template("locais/detail.html")
     return template.render(
         request=request,
@@ -72,7 +73,7 @@ async def local_devices(local_id: int):
     """Dispositivos de um local. Usado pelo seletor de série com escopo."""
     if not get_local(local_id):
         raise NotFoundError("Local %s não encontrado" % local_id)
-    grupos = get_devices_grouped_by_local(local_id=local_id)
+    grupos = enriquecer_grupos(get_devices_grouped_by_local(local_id=local_id))
     if not grupos:
         return {"local_id": local_id, "devices": []}
     devices = []

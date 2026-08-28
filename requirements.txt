@@ -5,3 +5,5 @@ python-multipart==0.0.6
 apscheduler==3.10.4
 tinytuya==1.20.0
 requests==2.32.3
+# Video ao vivo das cameras: binario proprio, sem exigir ffmpeg no sistema.
+imageio-ffmpeg==0.5.1

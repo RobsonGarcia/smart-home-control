@@ -944,3 +944,242 @@ select option { background: var(--surface); color: var(--text); }
     .toggle { width: 44px; height: 26px; }
     .toggle .knob { width: 20px; height: 20px; }
 }
+
+/* ----------------------------------------------------- acionamento (poder)
+
+   O botão de LIGAR é redondo e quente; o toggle de coleta é uma chave azul
+   deslizante. A diferença é de forma, não só de cor: desligar a bomba
+   achando que parou o gráfico é o erro mais caro que esta interface pode
+   induzir, e ele começa em dois controles parecidos lado a lado.            */
+
+:root {
+    --poder: oklch(0.78 0.15 75);
+    --poder-text: oklch(0.86 0.11 75);
+    --poder-soft: oklch(0.78 0.15 75 / 0.14);
+    --poder-line: oklch(0.78 0.15 75 / 0.34);
+}
+
+.btn-poder {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-soft);
+    color: var(--text-4);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-poder:hover:not([disabled]) { color: var(--text-bright); background: var(--surface-inset); }
+.btn-poder.on {
+    background: var(--poder-soft);
+    border-color: var(--poder-line);
+    color: var(--poder-text);
+}
+.btn-poder.on:hover:not([disabled]) { background: oklch(0.78 0.15 75 / 0.22); color: var(--poder-text); }
+.btn-poder.com-rotulo { width: auto; height: 34px; border-radius: 999px; padding: 0 15px 0 12px; }
+.btn-poder[disabled] { opacity: 0.32; cursor: not-allowed; }
+
+.selo-tipo {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: var(--text-3);
+}
+
+/* -------------------------------------------------- painel de controles */
+
+.controles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+}
+
+.controle {
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 12px 13px;
+    background: var(--surface-softer);
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+.controle.atuacao { border-color: var(--poder-line); background: var(--poder-soft); }
+.controle .nome { font-size: 13px; color: var(--text-2); font-weight: 500; }
+.controle .codigo { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-5); }
+.controle .linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.controle select, .controle input[type="number"] {
+    width: 100%;
+    padding: 7px 9px;
+    border-radius: 8px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12.5px;
+}
+.controle .valor-atual { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+
+.controles-bloqueado {
+    border: 1px dashed var(--line-dashed);
+    border-radius: 11px;
+    padding: 16px 18px;
+    color: var(--text-3);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.chave-acionamento {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--surface-softer);
+    margin-bottom: 14px;
+}
+.chave-acionamento .texto { font-size: 12.5px; color: var(--text-3); line-height: 1.5; }
+.chave-acionamento .texto strong { color: var(--text-2); display: block; font-size: 13px; margin-bottom: 2px; }
+.chave-acionamento .chaves { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+.chave-acionamento .chave { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-3); }
+
+.log-acoes { list-style: none; padding: 0; margin: 0; }
+.log-acoes li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--text-3);
+}
+.log-acoes li:last-child { border-bottom: none; }
+.log-acoes .quando { font-family: var(--font-mono); font-size: 11px; color: var(--text-5); flex-shrink: 0; }
+.log-acoes .falhou { color: var(--offline-text); }
+
+.select-inline {
+    padding: 4px 8px;
+    border-radius: 7px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12.5px;
+}
+
+/* ------------------------------------------------------------- câmeras */
+
+.cameras-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 14px;
+}
+
+.camera-card {
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    overflow: hidden;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+}
+.camera-card.online { border-color: var(--online-line); }
+
+.camera-imagem {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--surface-rail);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.camera-imagem img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.camera-sem-imagem { font-size: 12px; color: var(--text-5); }
+
+.camera-corpo { padding: 11px 13px 13px; display: flex; flex-direction: column; gap: 7px; }
+.camera-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.camera-acoes { display: flex; align-items: center; gap: 7px; margin-top: 4px; flex-wrap: wrap; }
+
+/* --------------------------------------------------------- vídeo ao vivo */
+
+.video-area {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 18px;
+    align-items: start;
+}
+@media (max-width: 900px) { .video-area { grid-template-columns: 1fr; } }
+
+.video-palco {
+    position: relative;
+    background: #000;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+}
+.video-palco video, .video-foto {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: #000;
+}
+.video-aviso {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.66);
+    border: 1px solid var(--line-strong);
+    font-size: 11.5px;
+    color: var(--text-2);
+}
+
+.video-lateral { display: flex; flex-direction: column; gap: 14px; }
+
+/* Cruz de PTZ: os quatro sentidos que toda câmera móvel entende. */
+.ptz-cruz {
+    position: relative;
+    width: 132px;
+    height: 132px;
+    margin: 4px auto 0;
+}
+.ptz-botao {
+    position: absolute;
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-soft);
+    color: var(--text-2);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+}
+.ptz-botao:hover:not([disabled]) { background: var(--surface-inset); color: var(--text-bright); }
+.ptz-botao[disabled] { opacity: 0.32; cursor: not-allowed; }
+.ptz-botao.cima     { top: 0; left: 45px; }
+.ptz-botao.baixo    { bottom: 0; left: 45px; }
+.ptz-botao.esquerda { left: 0; top: 45px; }
+.ptz-botao.direita  { right: 0; top: 45px; }
+.ptz-centro {
+    position: absolute;
+    top: 45px; left: 45px;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-5);
+}

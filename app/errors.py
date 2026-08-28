@@ -28,10 +28,21 @@ class ValidationError(DomainError):
     """Entrada inválida -> HTTP 400."""
 
 
+class ComandoError(DomainError):
+    """
+    O pedido era válido, mas o aparelho não obedeceu -> HTTP 502.
+
+    Separado de ValidationError de propósito: "você mandou um valor inválido"
+    e "o aparelho não respondeu" pedem reações opostas do usuário — corrigir
+    o pedido num caso, checar a rede/energia no outro.
+    """
+
+
 STATUS_POR_ERRO = {
     NotFoundError: 404,
     ConflictError: 409,
     ValidationError: 400,
+    ComandoError: 502,
 }
 
 

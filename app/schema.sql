@@ -44,11 +44,53 @@ CREATE TABLE IF NOT EXISTS devices (
     -- sao de sub-dispositivos Tuya. Nunca sobrescrita por scan/reimportacao.
     local_id INTEGER REFERENCES locais(id),
     comodo_id INTEGER REFERENCES comodos(id),
-    source TEXT DEFAULT 'cloud' CHECK(source IN ('cloud', 'broadcast', 'solar')),
+    source TEXT DEFAULT 'cloud'
+        CHECK(source IN ('cloud', 'broadcast', 'solar', 'camera')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Tipo fixado a mao pelo usuario. Vazio = vale o derivado por
+    -- app/capacidades.classificar() a partir da categoria e do mapping.
+    tipo_manual TEXT,
+    -- Opt-in de acionamento: NINGUEM nasce acionavel, nem a lampada.
+    -- confirmar_acao pede o dialogo de confirmacao antes de cada comando.
+    acionavel INTEGER NOT NULL DEFAULT 0,
+    confirmar_acao INTEGER NOT NULL DEFAULT 1,
     UNIQUE(id)
 );
+
+-- Vinculo de VIDEO de um dispositivo: como chegar na imagem de uma camera.
+-- A camera em si e uma linha em devices; isto e o que o Tuya nao entrega.
+-- As credenciais (usuario/senha da camera) NUNCA saem em log ou API.
+CREATE TABLE IF NOT EXISTS cameras (
+    device_id TEXT PRIMARY KEY REFERENCES devices(id),
+    driver TEXT NOT NULL,
+    host TEXT,
+    porta INTEGER,
+    credenciais_json TEXT,
+    perfil_token TEXT,
+    perfil_nome TEXT,
+    snapshot_uri TEXT,
+    stream_uri TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Auditoria de acionamento: o que foi mandado, por onde, e se funcionou.
+CREATE TABLE IF NOT EXISTS command_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id TEXT NOT NULL,
+    dp TEXT NOT NULL,
+    code TEXT,
+    valor_json TEXT,
+    transporte TEXT,
+    origem TEXT NOT NULL DEFAULT 'painel',
+    ok INTEGER NOT NULL DEFAULT 0,
+    erro TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_command_log_device
+    ON command_log(device_id, created_at DESC);
 
 -- Integracoes de energia solar: uma linha = uma conta/planta num fabricante
 -- (driver em app/solar/). Credenciais ficam no banco de proposito -- o *.db e

@@ -29,26 +29,62 @@
 <span class="badge {{ e }}">{{ rotulo_estado(e) }}</span>
 {%- endmacro %}
 
-{# Ícone por categoria Tuya. Traço, grade de 24, um estilo só — nunca emoji. #}
-{% macro icone(categoria, tam=19) -%}
-{%- set c = (categoria or '')|lower -%}
+{# Ícone por TIPO de dispositivo (app/capacidades.TIPOS). Traço, grade de 24,
+   um estilo só — nunca emoji. Aceita também a categoria Tuya crua: telas
+   antigas passavam 'cz'/'sp', e um aparelho sem tipo derivado cai no genérico. #}
+{% macro icone(tipo, tam=19) -%}
+{%- set c = (tipo or '')|lower -%}
 <svg viewBox="0 0 24 24" width="{{ tam }}" height="{{ tam }}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-{%- if c in ('cz', 'pc', 'wkcz') -%}
+{%- if c in ('tomada', 'cz', 'pc', 'wkcz') -%}
   <path d="M9 3v4M15 3v4M6.5 7h11v3.5a5.5 5.5 0 0 1-11 0V7Z"/><path d="M12 16.5V21"/>
-{%- elif c in ('kg', 'tgkg', 'dj', 'dd', 'fwd') -%}
+{%- elif c in ('interruptor', 'kg', 'tgkg', 'tdq') -%}
   <path d="M6.5 8h11a4 4 0 0 1 0 8h-11a4 4 0 0 1 0-8Z"/><path d="M8.8 10.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 0 0 0-2.8Z"/>
-{%- elif c in ('sp', 'videohd') -%}
+{%- elif c in ('luz', 'dj', 'dd', 'fwd') -%}
+  <path d="M12 3.6a5.4 5.4 0 0 0-3.2 9.7V16h6.4v-2.7A5.4 5.4 0 0 0 12 3.6Z"/><path d="M10 19h4"/>
+{%- elif c in ('camera', 'sp', 'videohd') -%}
   <path d="M3.5 7.5h10.2v9H3.5z"/><path d="M13.7 11l6.8-3v8l-6.8-3z"/>
-{%- elif c in ('zndb', 'znrb', 'aqcz') -%}
-  <path d="M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6Z"/><path d="M12 8.4V12l2.6 1.8"/>
-{%- elif c == 'solar' -%}
+{%- elif c in ('medidor', 'zndb', 'znrb', 'aqcz') -%}
+  <path d="M4.6 17.5a7.8 7.8 0 1 1 14.8 0"/><path d="M12 17.2l3.6-4.6"/>
+{%- elif c in ('inversor', 'solar') -%}
   <path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/>
-{%- elif c in ('wsdcg', 'ldcg', 'mcs', 'pir') -%}
+{%- elif c in ('sensor', 'wsdcg', 'ldcg', 'mcs', 'pir') -%}
   <path d="M13.6 14.4V5.2a1.6 1.6 0 1 0-3.2 0v9.2a3.4 3.4 0 1 0 3.2 0Z"/><path d="M12 12.4v3.4"/>
+{%- elif c == 'fechadura' -%}
+  <path d="M6.5 10.5h11v9.2h-11z"/><path d="M9 10.5V7.9a3 3 0 0 1 6 0v2.6"/><path d="M12 14v2.5"/>
+{%- elif c == 'robo' -%}
+  <path d="M12 4.3a7.7 7.7 0 1 0 0 15.4 7.7 7.7 0 0 0 0-15.4Z"/><path d="M12 9.4a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2Z"/>
+{%- elif c == 'infravermelho' -%}
+  <path d="M8.6 3.5h6.8A1.6 1.6 0 0 1 17 5.1v13.8a1.6 1.6 0 0 1-1.6 1.6H8.6A1.6 1.6 0 0 1 7 18.9V5.1a1.6 1.6 0 0 1 1.6-1.6Z"/><path d="M10 7.3h4"/><path d="M10.4 11h.01M13.6 11h.01M10.4 14.2h.01M13.6 14.2h.01"/>
+{%- elif c in ('hub', 'wg2', 'wnykq') -%}
+  <path d="M4.8 13.5h14.4v6H4.8z"/><path d="M8 16.5h.01M11.5 16.5h4.5"/><path d="M8.2 9.7a5.4 5.4 0 0 1 7.6 0"/><path d="M6.2 6.9a8.4 8.4 0 0 1 11.6 0"/>
 {%- else -%}
   <path d="M5 6.5h14v11H5z"/><path d="M9 10.5h6"/>
 {%- endif -%}
 </svg>
+{%- endmacro %}
+
+{# Botão de LIGAR/DESLIGAR. Deliberadamente diferente do toggle de coleta:
+   confundir "parei o gráfico" com "desliguei a bomba" é o erro mais caro que
+   esta tela pode induzir. `st` precisa ter passado por enriquecer_status. #}
+{% macro botao_ligar(st, com_rotulo=true) -%}
+{%- set a = st.acao_principal -%}
+{%- if a -%}
+  {%- set ligado = a.valor is sameas true -%}
+  <button type="button"
+          class="btn-poder{{ ' on' if ligado }}{{ ' com-rotulo' if com_rotulo }}"
+          {% if not st.acionavel %}disabled title="Acionamento não liberado para este dispositivo"
+          {% else %}title="{{ a.nome }} — {{ 'ligado' if ligado else 'desligado' }}"{% endif %}
+          data-nome='{{ st.device.name }}' data-acao='{{ a.nome }}'
+          data-confirmar="{{ 1 if st.confirmar_acao else 0 }}"
+          onclick="acionar(this, '{{ st.device.id }}', '{{ a.dp }}', {{ 'false' if ligado else 'true' }})">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M12 4.5v6.8"/><path d="M17.3 7a7 7 0 1 1-10.6 0"/></svg>
+      {%- if com_rotulo %}<span>{{ 'Desligar' if ligado else 'Ligar' }}</span>{% endif -%}
+  </button>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro selo_tipo(st) -%}
+<span class="selo-tipo">{{ icone(st.tipo, 13) }} {{ st.tipo_rotulo }}</span>
 {%- endmacro %}
 
 {% macro toggle(st) -%}
@@ -80,7 +116,7 @@
 {% set e = estado(st) %}
 <div class="device-card {{ e }}">
     <div class="device-topo">
-        <span class="device-icone">{{ icone(st.device.category) }}</span>
+        <span class="device-icone">{{ icone(st.tipo or st.device.category) }}</span>
         <span class="device-ident">
             <a href="/devices/{{ st.device.id }}" class="device-nome">{{ st.device.name }}</a>
             <span class="device-cat">{{ st.device.product_name or st.device.category or 'Dispositivo Tuya' }}</span>
@@ -105,7 +141,10 @@
             {{ badge(e) }}
             <span class="mono">{{ st.device.ip or 'sem IP' }}</span>
         </span>
-        {{ toggle(st) }}
+        <span style="display: flex; align-items: center; gap: 8px;">
+            {{ botao_ligar(st, false) }}
+            {{ toggle(st) }}
+        </span>
     </div>
 </div>
 {%- endmacro %}

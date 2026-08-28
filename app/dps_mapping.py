@@ -107,6 +107,11 @@ DPS_POR_CATEGORIA: Dict[str, Dict[str, str]] = {
     "kg": {"1": "switch_1", "2": "switch_2", "3": "switch_3",
            "4": "switch_4", "5": "switch_5", "6": "switch_6"},
     "tgkg": {"1": "switch_1", "2": "switch_2", "3": "switch_3"},
+    # tdq é a categoria dos relés/interruptores Aubess e afins — a mesma
+    # numeração de kg, com os temporizadores e o estado pós-queda por canal.
+    "tdq": {"1": "switch_1", "2": "switch_2", "3": "switch_3",
+            "4": "switch_4", "9": "countdown_1", "10": "countdown_2",
+            "11": "countdown_3", "38": "relay_status"},
 
     # Iluminação
     "dj": {"1": "switch_led", "3": "bright_value"},

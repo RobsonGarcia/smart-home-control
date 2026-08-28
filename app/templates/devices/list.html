@@ -59,6 +59,14 @@
     {% endfor %}
 </div>
 
+<div class="filtros">
+    <span class="rotulo">Tipo</span>
+    <span class="chip active" data-filtro-tipo="todos" onclick="filtrar(this, 'tipo')">Todos</span>
+    {% for t in tipos_presentes %}
+    <span class="chip" data-filtro-tipo="{{ t.tipo }}" onclick="filtrar(this, 'tipo')">{{ m.icone(t.tipo, 13) }} {{ t.rotulo }} <span class="count">{{ t.total }}</span></span>
+    {% endfor %}
+</div>
+
 <table class="devices-table" id="tabela">
     <thead>
         <tr>
@@ -69,19 +77,20 @@
             <th>Status</th>
             <th>Intervalo</th>
             <th>Monitorar</th>
+            <th>Acionar</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
         {% for st in device_statuses %}
         {% set e = m.estado(st) %}
-        <tr class="{{ e }}" data-estado="{{ e }}" data-local="{{ st.device.local_id or '' }}">
+        <tr class="{{ e }}" data-estado="{{ e }}" data-local="{{ st.device.local_id or '' }}" data-tipo="{{ st.tipo }}">
             <td>
                 <div class="cel-device">
-                    <span class="device-icone">{{ m.icone(st.device.category, 17) }}</span>
+                    <span class="device-icone">{{ m.icone(st.tipo, 17) }}</span>
                     <div>
                         <a href="/devices/{{ st.device.id }}" class="device-nome-cel">{{ st.device.name }}</a>
-                        <div class="id">{{ st.device.id }}</div>
+                        <div class="id">{{ st.tipo_rotulo }} · {{ st.device.id }}</div>
                     </div>
                 </div>
             </td>
@@ -115,6 +124,13 @@
                        onchange="atualizarIntervalo('{{ st.device.id }}', this.value)">
             </td>
             <td>{{ m.toggle(st) }}</td>
+            <td>
+                {%- if st.acao_principal -%}
+                    {{ m.botao_ligar(st, false) }}
+                {%- else -%}
+                    <span class="dim" style="font-size: 11.5px;">—</span>
+                {%- endif -%}
+            </td>
             <td style="text-align: right;">
                 <a href="/devices/{{ st.device.id }}" class="btn btn-small">Ver</a>
             </td>
@@ -138,7 +154,7 @@
 
 {% block extra_js %}
 <script>
-const filtros = { estado: 'todos', local: 'todos' };
+const filtros = { estado: 'todos', local: 'todos', tipo: 'todos' };
 
 function filtrar(el, tipo) {
     document.querySelectorAll('[data-filtro-' + tipo + ']').forEach((c) => c.classList.remove('active'));
@@ -149,7 +165,8 @@ function filtrar(el, tipo) {
     document.querySelectorAll('#tabela tbody tr').forEach((tr) => {
         const okEstado = filtros.estado === 'todos' || tr.dataset.estado === filtros.estado;
         const okLocal = filtros.local === 'todos' || tr.dataset.local === filtros.local;
-        const mostrar = okEstado && okLocal;
+        const okTipo = filtros.tipo === 'todos' || tr.dataset.tipo === filtros.tipo;
+        const mostrar = okEstado && okLocal && okTipo;
         tr.style.display = mostrar ? '' : 'none';
         if (mostrar) visiveis++;
     });

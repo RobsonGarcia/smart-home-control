@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, Body
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.concurrency import run_in_threadpool
 
-from app.errors import ValidationError
+from app.errors import NotFoundError, ValidationError
 from app.db import get_db
 from app.repository import (
     assign_device_placement,
@@ -13,8 +13,17 @@ from app.repository import (
     get_device_status,
     get_devices_grouped_by_local,
     update_monitor_config,
-    get_or_create_monitor_config
+    get_or_create_monitor_config,
+    ultimos_comandos,
 )
+from app.capacidades import (
+    TIPOS,
+    acoes_do_dispositivo,
+    enriquecer_grupos,
+    enriquecer_status,
+    tipos_presentes,
+)
+from app.control import transportes_de
 from app.inventory import import_devices_from_json
 from app.scanner import scan_network
 
@@ -30,7 +39,9 @@ async def devices_list(request: Request):
 
     # Uma query so, em vez de get_device_status() por dispositivo (que abria
     # 3-4 conexoes cada). Vem ordenado por local > comodo > nome.
-    device_statuses = get_all_device_statuses()
+    # enriquecer_status acrescenta tipo e capacidades — derivadas na leitura,
+    # do mapping que ja esta no banco (nao ha chamada de rede aqui).
+    device_statuses = enriquecer_status(get_all_device_statuses())
 
     locais = get_all_locais()
     for local in locais:
@@ -39,7 +50,8 @@ async def devices_list(request: Request):
     return template.render(
         request=request,
         device_statuses=device_statuses,
-        grupos=get_devices_grouped_by_local(),
+        tipos_presentes=tipos_presentes(device_statuses),
+        grupos=enriquecer_grupos(get_devices_grouped_by_local()),
         locais=locais
     )
 
@@ -126,9 +138,32 @@ async def device_detail(device_id: str, request: Request):
             'data': series['data'],
         })
 
+    # Capacidades: derivadas agora, do mapping deste aparelho. O valor atual
+    # de cada uma vem da ultima leitura -- e o que faz o controle nascer na
+    # posicao certa em vez de "desligado" por padrao.
+    st = enriquecer_status([status])[0]
+    ultimos_dps = {}
+    if status['reading'] and status['reading'].get('dps_json'):
+        try:
+            ultimos_dps = json.loads(status['reading']['dps_json']) or {}
+        except (json.JSONDecodeError, TypeError):
+            ultimos_dps = {}
+
+    acoes = []
+    for acao in acoes_do_dispositivo(status['device']):
+        dados = acao.to_dict()
+        dados['valor'] = ultimos_dps.get(acao.dp)
+        acoes.append(dados)
+
     return template.render(
         request=request,
-        device_status=status,
+        device_status=st,
+        acoes=acoes,
+        tipos=TIPOS,
+        transportes=[{'id': t.id, 'rotulo': t.rotulo, 'ok': v.ok,
+                      'motivo': v.motivo}
+                     for t, v in transportes_de(status['device'])],
+        comandos=ultimos_comandos(device_id, 8),
         chart_data=json.dumps(chart_data)
     )
 
@@ -192,3 +227,69 @@ async def definir_placement(device_id: str, data: dict = Body(...)):
         "local": status['local'],
         "comodo": status['comodo'],
     }
+
+
+@router.post("/{device_id}/comando")
+async def enviar_comando(device_id: str, data: dict = Body(...)):
+    """
+    Aciona um dispositivo: `{"dp": "1", "valor": true}`.
+
+    Toda a política (opt-in, ação declarada, faixa de valores) está em
+    app/control/servico.py — inclusive para quem chamar esta rota direto, sem
+    passar pela tela. Roda em threadpool porque falar com o aparelho é I/O
+    bloqueante de vários segundos no pior caso.
+    """
+    if 'dp' not in data:
+        raise ValidationError("Informe o 'dp' do comando.")
+
+    from app.control.servico import executar_comando
+    return await run_in_threadpool(executar_comando, device_id,
+                                   str(data['dp']), data.get('valor'))
+
+
+@router.post("/{device_id}/acionavel")
+async def alternar_acionavel(device_id: str, data: dict = Body(None)):
+    """
+    Liga/desliga o opt-in de acionamento. Sem corpo, alterna o valor atual.
+    """
+    from app.repository import get_device, set_acionavel
+    atual = get_device(device_id)
+    if not atual:
+        raise NotFoundError("Dispositivo %s não encontrado" % device_id)
+
+    novo = (not atual.get('acionavel')) if not data or 'acionavel' not in data \
+        else bool(data['acionavel'])
+    device = set_acionavel(device_id, novo)
+    return {"device_id": device_id, "acionavel": bool(device['acionavel'])}
+
+
+@router.post("/{device_id}/confirmar_acao")
+async def alternar_confirmacao(device_id: str, data: dict = Body(None)):
+    """Pedir ou não confirmação antes de cada comando deste dispositivo."""
+    from app.repository import get_device, set_confirmar_acao
+    atual = get_device(device_id)
+    if not atual:
+        raise NotFoundError("Dispositivo %s não encontrado" % device_id)
+
+    novo = (not atual.get('confirmar_acao')) \
+        if not data or 'confirmar_acao' not in data \
+        else bool(data['confirmar_acao'])
+    device = set_confirmar_acao(device_id, novo)
+    return {"device_id": device_id,
+            "confirmar_acao": bool(device['confirmar_acao'])}
+
+
+@router.post("/{device_id}/tipo")
+async def definir_tipo(device_id: str, data: dict = Body(...)):
+    """Fixa o tipo à mão. `{"tipo": null}` volta para o derivado."""
+    from app.capacidades import TIPOS, tipo_do_dispositivo
+    from app.repository import set_tipo_manual
+
+    tipo = data.get('tipo') or None
+    if tipo is not None and tipo not in TIPOS:
+        raise ValidationError("Tipo desconhecido: %s. Aceitos: %s."
+                              % (tipo, ", ".join(sorted(TIPOS))))
+
+    device = set_tipo_manual(device_id, tipo)
+    return {"device_id": device_id, "tipo_manual": device['tipo_manual'],
+            "tipo": tipo_do_dispositivo(device)}

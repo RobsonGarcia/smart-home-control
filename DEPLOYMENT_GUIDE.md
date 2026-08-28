@@ -157,7 +157,7 @@ with get_db() as conn:
 
 No terminal do collector, você verá linhas como:
 ```
-INFO:app.collector:Job agendado para device ebd65a07b2543ff36fhklt: 60s
+INFO:app.collector:Job agendado para device eb0000000000000000xxxx: 60s
 ```
 
 Cada linha = um device sendo monitorado.
@@ -167,7 +167,7 @@ Cada linha = um device sendo monitorado.
 ```bash
 python -c "
 from app.collector import collect_device_status
-collect_device_status('ebd65a07b2543ff36fhklt')  # Seu device ID
+collect_device_status('eb0000000000000000xxxx')  # Seu device ID
 print('Coleta manual OK')
 "
 ```

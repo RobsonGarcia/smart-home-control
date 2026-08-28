@@ -116,12 +116,19 @@ def insert_reading(device_id: str, dps_json: str, online: bool,
 
 
 def get_latest_reading(device_id: str) -> Optional[Dict]:
-    """Retorna a leitura mais recente de um dispositivo."""
+    """
+    Retorna a leitura mais recente de um dispositivo.
+
+    O desempate por id é necessário, não decorativo: collected_at tem
+    resolução de 1 segundo, e um comando grava a leitura dele no mesmo
+    segundo em que o coletor pode ter gravado a dele. Sem o desempate, qual
+    das duas volta é sorteio — e o painel pisca o estado antigo.
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             SELECT * FROM readings WHERE device_id = ?
-            ORDER BY collected_at DESC LIMIT 1
+            ORDER BY collected_at DESC, id DESC LIMIT 1
         """, (device_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
@@ -1194,3 +1201,164 @@ def ultima_leitura_tmstp(device_id: str) -> Optional[int]:
     except (ValueError, TypeError):
         return None
 
+
+
+# ---------------------------------------------------------------------------
+# Acionamento: opt-in por dispositivo e auditoria de comandos
+# ---------------------------------------------------------------------------
+
+def _exige_device(conn, device_id: str) -> Dict:
+    row = conn.execute("SELECT * FROM devices WHERE id = ?",
+                       (device_id,)).fetchone()
+    if row is None:
+        raise NotFoundError("Dispositivo %s não encontrado" % device_id)
+    return dict(row)
+
+
+def set_acionavel(device_id: str, acionavel: bool) -> Dict:
+    """
+    Liga ou desliga o acionamento DESTE dispositivo.
+
+    É o opt-in: nada nasce acionável, nem depois de um scan. Desligar a chave
+    não desfaz nada no aparelho — só tira o botão da tela e faz a rota de
+    comando recusar.
+    """
+    with get_db() as conn:
+        _exige_device(conn, device_id)
+        conn.execute("UPDATE devices SET acionavel = ?,"
+                     " updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                     (1 if acionavel else 0, device_id))
+        return _exige_device(conn, device_id)
+
+
+def set_confirmar_acao(device_id: str, confirmar: bool) -> Dict:
+    """Pedir (ou não) o diálogo de confirmação antes de cada comando."""
+    with get_db() as conn:
+        _exige_device(conn, device_id)
+        conn.execute("UPDATE devices SET confirmar_acao = ?,"
+                     " updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                     (1 if confirmar else 0, device_id))
+        return _exige_device(conn, device_id)
+
+
+def set_tipo_manual(device_id: str, tipo: Optional[str]) -> Dict:
+    """
+    Fixa o tipo à mão. `None` volta a valer o derivado da categoria/mapping —
+    que é o normal; isto existe para o aparelho que a categoria classifica mal.
+    """
+    with get_db() as conn:
+        _exige_device(conn, device_id)
+        conn.execute("UPDATE devices SET tipo_manual = ?,"
+                     " updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                     (tipo or None, device_id))
+        return _exige_device(conn, device_id)
+
+
+def registrar_comando(device_id: str, dp: str, code: str = None,
+                      valor=None, transporte: str = None, ok: bool = False,
+                      erro: str = None, origem: str = "painel") -> None:
+    """
+    Grava o comando no log — sucesso E falha.
+
+    A falha importa tanto quanto o acerto: "mandei desligar a bomba e não
+    aconteceu nada" só é diagnosticável se ficou registrado que a tentativa
+    existiu e qual foi o erro.
+    """
+    with get_db() as conn:
+        conn.execute("""
+            INSERT INTO command_log
+            (device_id, dp, code, valor_json, transporte, origem, ok, erro)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (device_id, str(dp), code, json.dumps(valor), transporte,
+              origem, 1 if ok else 0, erro))
+
+
+def ultimos_comandos(device_id: str, limite: int = 10) -> List[Dict]:
+    """As últimas ações enviadas a um dispositivo, mais recente primeiro."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT * FROM command_log WHERE device_id = ?
+            ORDER BY created_at DESC, id DESC LIMIT ?
+        """, (device_id, limite)).fetchall()
+    saida = []
+    for row in rows:
+        item = dict(row)
+        try:
+            item["valor"] = json.loads(item["valor_json"] or "null")
+        except (ValueError, TypeError):
+            item["valor"] = None
+        saida.append(item)
+    return saida
+
+
+# ---------------------------------------------------------------------------
+# Câmeras: o vínculo de vídeo de um dispositivo
+# ---------------------------------------------------------------------------
+
+def upsert_camera(device_id: str, driver: str, host: str = None,
+                  porta: int = None, credenciais_json: str = None,
+                  perfil_token: str = None, perfil_nome: str = None,
+                  snapshot_uri: str = None, stream_uri: str = None,
+                  enabled: bool = True) -> Dict:
+    """
+    Cria ou atualiza o vínculo de vídeo. Reconfigurar uma câmera é o caso
+    comum (mudou a senha, trocou o perfil), então não há create separado.
+    """
+    with get_db() as conn:
+        _exige_device(conn, device_id)
+        conn.execute("""
+            INSERT INTO cameras (device_id, driver, host, porta,
+                credenciais_json, perfil_token, perfil_nome, snapshot_uri,
+                stream_uri, enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(device_id) DO UPDATE SET
+                driver = excluded.driver,
+                host = excluded.host,
+                porta = excluded.porta,
+                credenciais_json = COALESCE(excluded.credenciais_json,
+                                            cameras.credenciais_json),
+                perfil_token = excluded.perfil_token,
+                perfil_nome = excluded.perfil_nome,
+                snapshot_uri = excluded.snapshot_uri,
+                stream_uri = excluded.stream_uri,
+                enabled = excluded.enabled,
+                updated_at = CURRENT_TIMESTAMP
+        """, (device_id, driver, host, porta, credenciais_json, perfil_token,
+              perfil_nome, snapshot_uri, stream_uri, 1 if enabled else 0))
+        return dict(conn.execute("SELECT * FROM cameras WHERE device_id = ?",
+                                 (device_id,)).fetchone())
+
+
+def get_camera(device_id: str) -> Optional[Dict]:
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM cameras WHERE device_id = ?",
+                           (device_id,)).fetchone()
+        return dict(row) if row else None
+
+
+def get_cameras(apenas_ativas: bool = False) -> List[Dict]:
+    """Câmeras configuradas, com o nome e o local do dispositivo junto."""
+    sql = """
+        SELECT c.*, d.name AS device_nome, d.ip AS device_ip,
+               d.local_id, l.nome AS local_nome
+        FROM cameras c
+        JOIN devices d ON d.id = c.device_id
+        LEFT JOIN locais l ON l.id = d.local_id
+        WHERE (? = 0 OR c.enabled = 1)
+        ORDER BY d.name COLLATE NOCASE
+    """
+    with get_db() as conn:
+        return [dict(r) for r in conn.execute(sql,
+                                              (1 if apenas_ativas else 0,))]
+
+
+def delete_camera(device_id: str) -> None:
+    """
+    Remove só o vínculo de vídeo. O dispositivo continua no inventário, com
+    a coleta de DPs intacta — desconfigurar a imagem não é apagar a câmera.
+    """
+    with get_db() as conn:
+        if conn.execute("SELECT 1 FROM cameras WHERE device_id = ?",
+                        (device_id,)).fetchone() is None:
+            raise NotFoundError("Câmera %s não configurada" % device_id)
+        conn.execute("DELETE FROM cameras WHERE device_id = ?", (device_id,))

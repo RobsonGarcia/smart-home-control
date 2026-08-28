@@ -28,3 +28,21 @@ SOLAR_BACKFILL_DIAS = 30
 
 DEVICES_JSON_PATH = BASE_DIR / "devices.json"
 SNAPSHOT_JSON_PATH = BASE_DIR / "snapshot.json"
+
+# Nuvem Tuya (opcional): caminho de comando para quem nao tem IP na LAN e
+# unico caminho possivel para os controles infravermelho. Gitignorado.
+TUYA_LOCAL_JSON_PATH = BASE_DIR / "tuya.local.json"
+
+# Cameras. O painel nao guarda video: o snapshot e servido sob demanda e o
+# HLS vive num diretorio temporario enquanto alguem estiver assistindo.
+HLS_DIR = DATA_DIR / "hls"
+# Segundos sem ninguem pedir o m3u8 antes de encerrar o ffmpeg daquela camera.
+HLS_INATIVIDADE_SEGUNDOS = 30
+# Duracao de cada segmento e quantos ficam na lista (latencia ~ 3x isso).
+HLS_SEGMENTO_SEGUNDOS = 1
+HLS_SEGMENTOS_NA_LISTA = 4
+# Cache do snapshot: a grade de cameras pede varias imagens de uma vez.
+SNAPSHOT_TTL_SEGUNDOS = 2
+# Portas que a sonda tenta ao procurar ONVIF/RTSP numa camera.
+PORTAS_ONVIF = (80, 8000, 2020, 8080, 5000)
+PORTAS_RTSP = (554, 6554, 8554)

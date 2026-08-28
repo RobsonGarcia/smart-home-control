@@ -221,6 +221,58 @@ function pedirTexto(mensagem, opcoes) {
     return _abrirDialogo(mensagem, opcoes, true);
 }
 
+/* ----------------------------------------------------------- acionamento */
+
+/*
+ * Mandar um comando a um aparelho. UMA função para as três telas (lista,
+ * cômodos, detalhe) e para os controles de câmera — o que muda é só o botão.
+ *
+ * A confirmação sai do próprio botão (data-confirmar), que veio da coluna
+ * confirmar_acao do dispositivo: quem decide se pergunta é o servidor, não o
+ * JavaScript. E a recusa por falta de opt-in também é do servidor — este
+ * botão nem aparece sem ela, mas se aparecesse a rota recusaria igual.
+ */
+
+function rotuloValor(valor) {
+    if (valor === true) return 'ligado';
+    if (valor === false) return 'desligado';
+    return String(valor);
+}
+
+async function acionar(el, deviceId, dp, valor, opcoes) {
+    const o = opcoes || {};
+    const dados = (el && el.dataset) || {};
+
+    if (dados.confirmar === '1') {
+        const acao = dados.acao || 'este comando';
+        const alvo = dados.nome ? ' em ' + dados.nome : '';
+        const rotulo = valor === false ? 'Desligar'
+                     : (valor === true ? 'Ligar' : 'Aplicar');
+        const ok = await confirmar(rotulo + ' "' + acao + '"' + alvo + '?', {
+            titulo: 'Confirmar acionamento', rotulo: rotulo, perigo: true,
+        });
+        if (!ok) return false;
+    }
+
+    if (el) el.disabled = true;
+    try {
+        const r = await apiPost('/devices/' + deviceId + '/comando',
+                                { dp: dp, valor: valor });
+        // "confirmado" = o aparelho devolveu o estado novo. Sem isso o comando
+        // saiu, mas ninguém garante que ele obedeceu — e a tela diz isso.
+        toastOk((r.nome || 'Comando') + ': ' + rotuloValor(r.valor)
+                + (r.confirmado ? '' : ' (sem confirmação do aparelho)'));
+        if (o.aoConcluir) o.aoConcluir(r);
+        if (o.recarregar !== false) recarregar(900);
+        return true;
+    } catch (erro) {
+        toastErro(erro.message);
+        return false;
+    } finally {
+        if (el) el.disabled = false;
+    }
+}
+
 /* ------------------------------------------------------- cores de séries */
 
 /**

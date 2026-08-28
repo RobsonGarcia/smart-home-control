@@ -147,7 +147,7 @@ Se não sabe qual DP usar:
 3. Collector vai detectar em ≤30s e começar coleta
 4. Veja logs no terminal do collector:
    ```
-   INFO:app.collector:Job agendado para device ebd65a07b2543ff36fhklt: 60s
+   INFO:app.collector:Job agendado para device eb0000000000000000xxxx: 60s
    ```
 
 ---
@@ -165,7 +165,7 @@ Se não sabe qual DP usar:
 # Terminal 3
 python -c "
 from app.repository import get_latest_reading
-reading = get_latest_reading('ebd65a07b2543ff36fhklt')
+reading = get_latest_reading('eb0000000000000000xxxx')
 print('Última leitura:', reading)
 "
 ```
@@ -217,10 +217,34 @@ Agora o gráfico mostra ambos os canais lado a lado.
 
 ```bash
 # Terminal 3
-sqlite3 data/app.db "SELECT collected_at, dps_json FROM readings WHERE device_id='ebd65a07b2543ff36fhklt' ORDER BY collected_at DESC LIMIT 10;"
+sqlite3 data/app.db "SELECT collected_at, dps_json FROM readings WHERE device_id='eb0000000000000000xxxx' ORDER BY collected_at DESC LIMIT 10;"
 ```
 
 ---
+
+## 🎛️ Ligar uma luz pelo painel
+
+Nada é acionável até você liberar — de propósito.
+
+1. **Dispositivos** → abra o aparelho (ou filtre por *Tipo → Interruptor*).
+2. No cartão **Controles**, ligue a chave *Permitir acionamento* e confirme.
+3. Os botões acendem. O redondo com o símbolo de energia liga e desliga; o
+   toggle azul ao lado continua sendo só a **coleta de dados** — são coisas
+   diferentes, e por isso têm formatos diferentes.
+4. Em bomba d'água e afins, deixe *Pedir confirmação* ligada.
+
+Só funciona com o painel rodando na mesma rede do aparelho (ou com a nuvem
+Tuya configurada em `tuya.local.json`).
+
+## 📹 Ver uma câmera
+
+1. Rode a sonda **na rede das câmeras** para saber o caminho:
+   `python scripts/sonda_onvif.py --usuario admin --senha ****`
+2. **Câmeras** → *Configurar vídeo* na câmera desejada.
+3. Escolha **ONVIF** (se a sonda achou) ou **RTSP (URL manual)**, preencha o
+   IP/URL e o usuário e senha **da câmera**, e clique em *Testar câmera*.
+4. Escolha o perfil e salve. A miniatura aparece na grade; *Ao vivo* abre o
+   vídeo, com PTZ e sirene ao lado.
 
 ## ☀️ Energia Solar em 1 Minuto
 

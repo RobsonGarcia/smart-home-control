@@ -7,7 +7,7 @@ from pathlib import Path
 
 from app.db import init_db
 from app.errors import DomainError, status_para
-from app.routes import devices, energy, locais, solar
+from app.routes import cameras, devices, energy, locais, solar
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,6 +34,7 @@ app.include_router(locais.router)
 app.include_router(devices.router)
 app.include_router(energy.router)
 app.include_router(solar.router)
+app.include_router(cameras.router)
 
 
 @app.exception_handler(DomainError)

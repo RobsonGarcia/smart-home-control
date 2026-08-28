@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+
+{% block title %}Câmeras - Painel Tuya{% endblock %}
+
+{% block breadcrumb %}<span class="current">Câmeras</span>{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn" onclick="descobrir()">{{ m.icone_svg('scan') }} Descobrir na rede</button>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div class="page-head-text">
+        <h1>Câmeras</h1>
+        <p class="page-lead">A imagem vem da rede local, direto da câmera — o Tuya entrega tudo
+        de uma câmera menos o vídeo. Movimento, sirene e holofote continuam sendo comandos
+        normais, na tela de cada uma.</p>
+    </div>
+</div>
+
+{% if not tem_ffmpeg %}
+<div class="aviso" style="margin-bottom: 18px;">
+    {{ m.icone_svg('info', 14) }}
+    <span><strong>Sem ffmpeg:</strong> a foto ainda funciona nas câmeras que têm snapshot
+    ONVIF, mas o vídeo ao vivo não. Instale com
+    <span class="mono">pip install imageio-ffmpeg</span> e reinicie o painel.</span>
+</div>
+{% endif %}
+
+<div id="achados" style="display: none;" class="card" data-secao="achados">
+    <h3 style="margin-top: 0;">Encontradas na rede</h3>
+    <div id="achadosLista" class="radio-cards" style="grid-template-columns: 1fr;"></div>
+</div>
+
+{% if not cameras %}
+<div class="empty-state">
+    <strong>Nenhuma câmera no inventário</strong>
+    Importe o <span class="mono">devices.json</span> ou escaneie a rede em
+    <a href="/devices">Dispositivos</a>; as câmeras aparecem aqui sozinhas.
+</div>
+{% else %}
+<div class="cameras-grid">
+    {% for c in cameras %}
+    {% set e = m.estado(c) %}
+    <div class="camera-card {{ e }}">
+        <div class="camera-imagem">
+            {% if c.camera %}
+            <img data-camera="{{ c.device.id }}" alt="{{ c.device.name }}"
+                 src="/cameras/{{ c.device.id }}/snapshot.jpg"
+                 onerror="semImagem(this)">
+            <span class="camera-sem-imagem" style="display: none;">sem imagem agora</span>
+            {% else %}
+            <span class="camera-sem-imagem">não configurada</span>
+            {% endif %}
+        </div>
+
+        <div class="camera-corpo">
+            <div class="camera-topo">
+                <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                    {{ m.dot(e) }}
+                    <strong style="font-size: 14px;">{{ c.device.name }}</strong>
+                </span>
+                <span class="mono dim" style="font-size: 11px;">{{ c.device.ip or 'sem IP' }}</span>
+            </div>
+            <div class="dim" style="font-size: 11.5px;">
+                {% if c.camera %}
+                    {{ c.camera.driver }}{% if c.camera.perfil_nome %} · {{ c.camera.perfil_nome }}{% endif %}
+                    {% if c.local %} · {{ c.local.nome }}{% endif %}
+                {% else %}
+                    Vídeo não configurado — o painel só coleta os DPs dela.
+                {% endif %}
+            </div>
+            <div class="camera-acoes">
+                {% if c.camera %}
+                <a class="btn btn-small" href="/cameras/{{ c.device.id }}/ao-vivo">Ao vivo</a>
+                <button class="btn btn-small"
+                        onclick="abrirConfigurador('{{ c.device.id }}', '{{ c.device.name }}', '{{ c.device.ip or '' }}')">Reconfigurar</button>
+                <button class="btn btn-danger btn-icon btn-small" title="Remover vídeo"
+                        onclick="removerCamera('{{ c.device.id }}', '{{ c.device.name }}')">
+                    {{ m.icone_svg('lixeira', 13) }}
+                </button>
+                {% else %}
+                <button class="btn btn-small btn-primary"
+                        onclick="abrirConfigurador('{{ c.device.id }}', '{{ c.device.name }}', '{{ c.device.ip or '' }}')">Configurar vídeo</button>
+                <a class="btn btn-small" href="/devices/{{ c.device.id }}">Dispositivo</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# --------------------------------------------------------- configurador #}
+<div id="modalCamera" class="modal">
+    <div class="modal-content" style="max-width: 620px;">
+        <div class="modal-head">
+            <div>
+                <h2 id="camTitulo">Configurar vídeo</h2>
+                <div class="sub">Testamos a câmera antes de salvar: o que você escolhe é um perfil real dela.</div>
+            </div>
+            <span class="close" onclick="fecharModal('modalCamera')">&times;</span>
+        </div>
+        <form onsubmit="return false;">
+            <div class="modal-body">
+                <div class="campo">
+                    <label for="camDriver">Como falar com a câmera</label>
+                    <select id="camDriver" onchange="montarCampos()"></select>
+                    <span class="hint" id="camDriverDica"></span>
+                </div>
+
+                <div id="camCampos" style="display: flex; gap: 16px; flex-wrap: wrap;"></div>
+
+                <div class="aviso" style="font-size: 12.5px;">
+                    {{ m.icone_svg('info', 14) }}
+                    <span>O usuário e a senha aqui são os <strong>da câmera</strong> (ONVIF/RTSP),
+                    não os da sua conta no app do fabricante. Ficam só no banco local e nunca
+                    voltam em resposta de API.</span>
+                </div>
+
+                <div id="camPasso2" style="display: none; flex-direction: column; gap: 14px;">
+                    <div class="campo">
+                        <label>Perfil de vídeo</label>
+                        <div id="camPerfis" class="radio-cards" style="grid-template-columns: 1fr;"></div>
+                    </div>
+                </div>
+
+                <div id="camStatus" class="dim" style="font-size: 12.5px; display: none;"></div>
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn" onclick="fecharModal('modalCamera')">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnTestarCam" onclick="testarCamera()">Testar câmera</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarCam" style="display: none;" onclick="salvarCamera()">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const DRIVERS = {{ drivers|tojson }};
+let alvo = { deviceId: null, nome: '', ip: '' };
+let perfisAchados = [];
+
+/* As miniaturas se atualizam sozinhas. Cada uma é uma ida à câmera, então o
+   intervalo é generoso de propósito — isto é uma grade de reconhecimento,
+   não vigilância; para vigiar tem a página de cada câmera. */
+function atualizarMiniaturas() {
+    document.querySelectorAll('img[data-camera]').forEach((img) => {
+        const base = '/cameras/' + img.dataset.camera + '/snapshot.jpg';
+        img.src = base + '?t=' + Date.now();
+    });
+}
+setInterval(atualizarMiniaturas, 15000);
+
+function semImagem(img) {
+    img.style.display = 'none';
+    const aviso = img.parentElement.querySelector('.camera-sem-imagem');
+    if (aviso) aviso.style.display = '';
+}
+
+async function descobrir() {
+    const caixa = document.getElementById('achados');
+    const lista = document.getElementById('achadosLista');
+    caixa.style.display = '';
+    lista.innerHTML = '<span class="dim">procurando câmeras ONVIF na rede…</span>';
+    try {
+        const r = await apiPost('/cameras/api/descobrir', { timeout: 4 });
+        if (!r.total) {
+            lista.innerHTML = '<span class="dim">Nenhuma câmera se anunciou. '
+                + 'Isso não fecha a questão: há firmware com a descoberta desligada e '
+                + 'ONVIF funcionando — configure pelo IP, ou use a URL RTSP.</span>';
+            return;
+        }
+        lista.innerHTML = '';
+        r.encontradas.forEach((c) => {
+            const item = document.createElement('label');
+            item.className = 'radio-card';
+            item.innerHTML =
+                '<strong></strong><span class="dim"></span>';
+            item.children[0].textContent = (c.nome || c.fabricante || 'Câmera') + ' — ' + c.host + ':' + c.porta;
+            item.children[1].textContent = c.device_id
+                ? 'casa com um dispositivo do inventário'
+                : 'não está no inventário do painel';
+            if (c.device_id) {
+                item.style.cursor = 'pointer';
+                item.onclick = () => abrirConfigurador(c.device_id, c.nome, c.host, c.porta);
+            }
+            lista.appendChild(item);
+        });
+    } catch (erro) {
+        lista.innerHTML = '';
+        toastErro(erro.message);
+    }
+}
+
+function abrirConfigurador(deviceId, nome, ip, porta) {
+    alvo = { deviceId: deviceId, nome: nome, ip: ip || '', porta: porta || '' };
+    document.getElementById('camTitulo').textContent = 'Vídeo de ' + nome;
+    document.getElementById('camPasso2').style.display = 'none';
+    document.getElementById('btnSalvarCam').style.display = 'none';
+    document.getElementById('btnTestarCam').style.display = '';
+    document.getElementById('camStatus').style.display = 'none';
+
+    const sel = document.getElementById('camDriver');
+    if (!sel.options.length) {
+        DRIVERS.forEach((d) => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.rotulo;
+            sel.appendChild(opt);
+        });
+    }
+    montarCampos();
+    abrirModal('modalCamera');
+}
+
+function driverAtual() {
+    const id = document.getElementById('camDriver').value;
+    return DRIVERS.find((d) => d.id === id) || DRIVERS[0];
+}
+
+/* O formulário se monta do que o driver declara. Driver novo com credencial
+   diferente não pede alteração nenhuma neste template. */
+function montarCampos() {
+    const driver = driverAtual();
+    const caixa = document.getElementById('camCampos');
+    caixa.innerHTML = '';
+    document.getElementById('camDriverDica').textContent =
+        driver.id === 'onvif'
+            ? 'Padrão aberto: o painel descobre perfis, foto e vídeo sozinho.'
+            : 'Para câmera que transmite mas não fala ONVIF — a URL vem da documentação do fabricante.';
+
+    driver.campos.forEach((campo) => {
+        const div = document.createElement('div');
+        div.className = 'campo';
+        div.style.flex = '1 1 220px';
+        const label = document.createElement('label');
+        label.setAttribute('for', 'cam-' + campo.chave);
+        label.textContent = campo.rotulo + (campo.opcional ? '' : ' *');
+        const input = document.createElement('input');
+        input.type = campo.secreto ? 'password' : 'text';
+        input.id = 'cam-' + campo.chave;
+        input.autocomplete = campo.secreto ? 'new-password' : 'off';
+        if (campo.chave === 'host') input.value = alvo.ip || '';
+        if (campo.chave === 'porta' && alvo.porta) input.value = alvo.porta;
+        div.appendChild(label);
+        div.appendChild(input);
+        if (campo.dica) {
+            const hint = document.createElement('span');
+            hint.className = 'hint';
+            hint.textContent = campo.dica;
+            div.appendChild(hint);
+        }
+        caixa.appendChild(div);
+    });
+}
+
+function configDoFormulario() {
+    const config = {};
+    driverAtual().campos.forEach((campo) => {
+        const el = document.getElementById('cam-' + campo.chave);
+        if (el && el.value.trim()) config[campo.chave] = el.value.trim();
+    });
+    return config;
+}
+
+function mostrarStatus(texto) {
+    const el = document.getElementById('camStatus');
+    el.textContent = texto;
+    el.style.display = '';
+}
+
+async function testarCamera() {
+    const botao = document.getElementById('btnTestarCam');
+    botao.disabled = true;
+    mostrarStatus('falando com a câmera…');
+    try {
+        const r = await apiPost('/cameras/api/testar', {
+            driver: driverAtual().id, config: configDoFormulario(),
+        });
+        perfisAchados = r.perfis || [];
+        const info = r.info || {};
+        mostrarStatus('respondeu: ' + [info.fabricante, info.modelo, info.firmware]
+            .filter(Boolean).join(' · ') || 'câmera respondeu');
+
+        const lista = document.getElementById('camPerfis');
+        lista.innerHTML = '';
+        perfisAchados.forEach((p, idx) => {
+            const item = document.createElement('label');
+            item.className = 'radio-card';
+            item.innerHTML = '<input type="radio" name="perfil" value="' + idx + '"'
+                + (idx === 0 ? ' checked' : '') + '><strong></strong><span class="dim"></span>';
+            item.children[1].textContent = p.nome + (p.resolucao ? ' — ' + p.resolucao : '');
+            item.children[2].textContent =
+                (p.snapshot_uri ? 'foto direta' : 'foto pelo vídeo')
+                + (p.stream_uri ? ' · vídeo RTSP' : ' · sem vídeo');
+            lista.appendChild(item);
+        });
+        document.getElementById('camPasso2').style.display = 'flex';
+        document.getElementById('btnSalvarCam').style.display = '';
+    } catch (erro) {
+        mostrarStatus('');
+        document.getElementById('camStatus').style.display = 'none';
+        toastErro(erro.message);
+    } finally {
+        botao.disabled = false;
+    }
+}
+
+async function salvarCamera() {
+    const escolhido = document.querySelector('input[name="perfil"]:checked');
+    const perfil = perfisAchados[escolhido ? parseInt(escolhido.value, 10) : 0] || {};
+    await executar(
+        () => apiPost('/cameras/' + alvo.deviceId, {
+            driver: driverAtual().id,
+            config: configDoFormulario(),
+            perfil_token: perfil.token,
+            perfil_nome: perfil.nome,
+            snapshot_uri: perfil.snapshot_uri,
+            stream_uri: perfil.stream_uri,
+        }),
+        null,
+        () => { toastOk('Vídeo configurado'); recarregar(800); }
+    );
+}
+
+async function removerCamera(deviceId, nome) {
+    const ok = await confirmar('Remover o vídeo de "' + nome + '"? O dispositivo continua '
+        + 'no inventário e a coleta de dados dele não muda.',
+        { titulo: 'Remover vídeo', rotulo: 'Remover', perigo: true });
+    if (!ok) return;
+    await executar(() => apiDelete('/cameras/' + deviceId), null,
+        () => { toastOk('Vídeo removido'); recarregar(800); });
+}
+</script>
+{% endblock %}
