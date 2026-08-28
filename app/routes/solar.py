@@ -14,12 +14,12 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Body, Request
+from fastapi import APIRouter, Body, Query, Request
 from fastapi.responses import HTMLResponse
 
 from app.config import SOLAR_POLL_INTERVAL_SECONDS
 from app.dps_mapping import get_dp_info
-from app.errors import ValidationError
+from app.errors import NotFoundError, ValidationError
 from app.repository import (
     create_solar_integracao,
     criar_inversor_solar,
@@ -45,6 +45,87 @@ _ORDEM_CANONICA = {codigo: i for i, codigo in enumerate(CANAIS_SOLAR)}
 
 # Canais que valem um gráfico no detalhe: potência total e por canal MPPT.
 _CANAIS_GRAFICO = ["potencia_ca"] + ["potencia_mppt_%d" % n for n in range(1, 7)]
+
+# Períodos do gráfico do inversor. "hoje" é o único que recorta o DIA CIVIL —
+# é o recorte natural de geração solar, e o que o próprio inversor reporta em
+# `geracao_hoje`. Os outros são janelas móveis contadas a partir de agora.
+PERIODOS_SOLAR = [
+    {"valor": "hoje", "rotulo": "Hoje"},
+    {"valor": "24h", "rotulo": "24 h"},
+    {"valor": "7d", "rotulo": "7 dias"},
+    {"valor": "30d", "rotulo": "30 dias"},
+]
+_JANELA_HORAS = {"24h": 24, "7d": 24 * 7, "30d": 24 * 30}
+
+# Teto de pontos por série — mesma razão do grupo de energia: 30 dias de um
+# inversor são ~4.500 amostras e o gráfico não tem pixel para elas.
+_MAX_PONTOS_SERIE = 900
+
+
+def _inicio_do_periodo(periodo: str, tz_offset_min: int = 0) -> str:
+    """
+    Início da janela em UTC ("YYYY-MM-DD HH:MM:SS"), o formato de collected_at.
+
+    `tz_offset_min` é o `getTimezoneOffset()` do navegador (minutos a somar ao
+    horário local para chegar em UTC). Sem ele "hoje" seria a meia-noite de
+    Greenwich: no Brasil o gráfico começaria às 21 h do dia anterior.
+    """
+    agora = datetime.now(timezone.utc)
+    if periodo == "hoje":
+        local = agora - timedelta(minutes=tz_offset_min)
+        meia_noite_local = local.replace(hour=0, minute=0, second=0,
+                                         microsecond=0)
+        inicio = meia_noite_local + timedelta(minutes=tz_offset_min)
+    else:
+        inicio = agora - timedelta(hours=_JANELA_HORAS.get(periodo, 24))
+    return inicio.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _dados_do_inversor(device_id: str, periodo: str = "hoje",
+                       tz_offset_min: int = 0):
+    """
+    Canais e séries de um inversor num período.
+
+    Serve às duas formas da mesma tela: o HTML da primeira visita e o JSON de
+    cada atualização automática ou troca de período. Devolve None se o
+    device_id não for um inversor.
+    """
+    st = get_device_status(device_id)
+    if not st or st["device"].get("source") != "solar":
+        return None
+
+    leituras_brutas = _leituras_do_status(st)
+
+    leituras = []
+    for codigo in sorted(leituras_brutas,
+                         key=lambda c: _ORDEM_CANONICA.get(c, 999)):
+        if codigo == "tmstp":
+            continue
+        info = get_dp_info(codigo)
+        leituras.append({
+            "code": codigo,
+            "name": info["name"],
+            "unit": info.get("unit", ""),
+            "valor": leituras_brutas[codigo],
+        })
+
+    inicio = _inicio_do_periodo(periodo, tz_offset_min)
+    series = []
+    for codigo in _CANAIS_GRAFICO:
+        if codigo not in leituras_brutas and codigo != "potencia_ca":
+            continue
+        pontos = get_readings_for_series(device_id, codigo,
+                                         start_timestamp=inicio,
+                                         max_pontos=_MAX_PONTOS_SERIE)
+        if pontos:
+            series.append({
+                "id": codigo,
+                "label": get_dp_info(codigo)["name"],
+                "data": pontos,
+            })
+
+    return {"st": st, "leituras": leituras, "series": series,
+            "periodo": periodo}
 
 
 def _publica(integracao: dict) -> dict:
@@ -260,56 +341,53 @@ async def excluir_integracao(integracao_id: int):
     return {"deleted": True, **resultado}
 
 
+@router.get("/api/inversores/{device_id}/dados")
+async def inversor_dados(device_id: str,
+                         periodo: str = Query("hoje"),
+                         tz: int = Query(0)):
+    """
+    Canais e séries do inversor em JSON, para a atualização automática e para
+    a troca de período sem recarregar a página.
+
+    `tz` é o `getTimezoneOffset()` do navegador — só "hoje" depende dele, mas
+    depende de verdade: sem o fuso, o dia civil seria o de Greenwich.
+    """
+    dados = _dados_do_inversor(device_id, periodo, tz)
+    if dados is None:
+        raise NotFoundError("Inversor %s não encontrado" % device_id)
+
+    st = dados["st"]
+    return {
+        "device_id": device_id,
+        "periodo": dados["periodo"],
+        "online": bool(st.get("is_online")),
+        "collected_at": (st["reading"] or {}).get("collected_at"),
+        "leituras": dados["leituras"],
+        "series": dados["series"],
+    }
+
+
 @router.get("/inversores/{device_id}", response_class=HTMLResponse)
 async def inversor_detail(device_id: str, request: Request):
-    """Detalhe do inversor: leituras por canal e o gráfico do dia."""
-    st = get_device_status(device_id)
-    if not st or st["device"].get("source") != "solar":
+    """Detalhe do inversor: leituras por canal e o gráfico do período."""
+    dados = _dados_do_inversor(device_id)
+    if dados is None:
         return HTMLResponse(
             "<h1>Inversor não encontrado</h1>"
             "<p><a href=\"/solar\">Voltar</a></p>", status_code=404)
 
     vinculo = get_config_coleta_solar(device_id) or {}
-    leituras_brutas = _leituras_do_status(st)
-
-    leituras = []
-    for codigo in sorted(leituras_brutas,
-                         key=lambda c: _ORDEM_CANONICA.get(c, 999)):
-        if codigo == "tmstp":
-            continue
-        info = get_dp_info(codigo)
-        leituras.append({
-            "code": codigo,
-            "name": info["name"],
-            "unit": info.get("unit", ""),
-            "valor": leituras_brutas[codigo],
-        })
-
-    # Séries de potência das últimas 24 h, prontas para o gráfico.
-    inicio = (datetime.now(timezone.utc) - timedelta(hours=24)
-              ).strftime("%Y-%m-%d %H:%M:%S")
-    series = []
-    for codigo in _CANAIS_GRAFICO:
-        if codigo not in leituras_brutas and codigo != "potencia_ca":
-            continue
-        pontos = get_readings_for_series(device_id, codigo,
-                                         start_timestamp=inicio)
-        if pontos:
-            series.append({
-                "id": codigo,
-                "label": get_dp_info(codigo)["name"],
-                "data": pontos,
-            })
-
     integracao = None
     if vinculo.get("integracao_id"):
         integracao = _publica(get_solar_integracao(vinculo["integracao_id"]))
 
     return request.app.templates.get_template("solar/detail.html").render(
         request=request,
-        st=st,
+        st=dados["st"],
         vinculo=vinculo,
         integracao=integracao,
-        leituras=leituras,
-        series=series,
+        leituras=dados["leituras"],
+        series=dados["series"],
+        periodos=PERIODOS_SOLAR,
+        periodo=dados["periodo"],
     )

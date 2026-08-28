@@ -12,6 +12,7 @@ from app.config import (
     DEFAULT_POLL_INTERVAL_SECONDS,
     SOLAR_BACKFILL_DIAS
 )
+from app.escala import aplicar_no_device
 from app.repository import (
     get_all_monitor_configs,
     get_config_coleta_solar,
@@ -67,7 +68,11 @@ def collect_device_status(device_id: str) -> None:
 
         if status_bruto and 'dps' in status_bruto:
             logger.info(f"   ✅ {name}: Dados coletados com sucesso!")
-            insert_reading(device_id, json.dumps(status_bruto['dps']), True)
+            # O aparelho manda inteiro deslocado (1265 para 126,5 V); o `scale`
+            # do mapping desfaz isso AQUI, para que readings guarde unidade
+            # real e nenhuma tela precise lembrar de dividir.
+            dps = aplicar_no_device(status_bruto['dps'], device)
+            insert_reading(device_id, json.dumps(dps), True)
         else:
             logger.warning(f"   ❌ {name}: Dispositivo não respondeu usando "
                           f"protocolo {version}.")

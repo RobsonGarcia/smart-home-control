@@ -33,7 +33,10 @@
             {{ m.selo_tipo(device_status) }}
             <span class="mono muted">{{ device_status.device.id }}</span>
         </div>
-        <h1>{{ device_status.device.name }}</h1>
+        <h1 style="display: flex; align-items: center; gap: 12px;">
+            {{ m.avatar(device_status, 'device-avatar-grande') }}
+            <span>{{ device_status.device.name }}</span>
+        </h1>
         <div class="local-meta">
             <span>{{ device_status.device.product_name or device_status.device.category or 'Dispositivo Tuya' }}</span>
             <span class="sep"></span>
@@ -42,7 +45,7 @@
             <span class="mono">v{{ device_status.device.protocol_version or '?' }}</span>
         </div>
     </div>
-    <div class="controls" style="margin: 0; align-items: center;">
+    <div class="controls" style="margin: 0; align-items: center;" data-refresh>
         <span class="muted" style="font-size: 12.5px;">Monitorar</span>
         {{ m.toggle(device_status) }}
     </div>
@@ -103,18 +106,21 @@
                 {% if a.tipo == 'boolean' %}
                 {% set ligado = a.valor is sameas true %}
                 <button type="button" class="btn-poder{{ ' on' if ligado }}"
+                        data-dp="{{ a.dp }}"
                         {% if not device_status.acionavel %}disabled{% endif %}
                         title="{{ 'Ligado' if ligado else 'Desligado' }}"
                         data-nome='{{ device_status.device.name }}' data-acao='{{ a.nome }}'
                         data-confirmar="{{ 1 if device_status.confirmar_acao else 0 }}"
-                        onclick="acionar(this, DEVICE_ID, '{{ a.dp }}', {{ 'false' if ligado else 'true' }})">
+                        data-valor="{{ 1 if ligado else 0 }}"
+                        onclick="acionar(this, DEVICE_ID, '{{ a.dp }}', this.dataset.valor !== '1')">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M12 4.5v6.8"/><path d="M17.3 7a7 7 0 1 1-10.6 0"/></svg>
                 </button>
                 {% endif %}
             </div>
 
             {% if a.tipo == 'enum' %}
-            <select {% if not device_status.acionavel %}disabled{% endif %}
+            <select data-dp="{{ a.dp }}"
+                    {% if not device_status.acionavel %}disabled{% endif %}
                     data-nome='{{ device_status.device.name }}' data-acao='{{ a.nome }}'
                     data-confirmar="{{ 1 if device_status.confirmar_acao else 0 }}"
                     onchange="acionar(this, DEVICE_ID, '{{ a.dp }}', this.value)">
@@ -200,11 +206,12 @@
     <div class="info-card">
         <h3>Última leitura</h3>
         {% if device_status.reading %}
-        <p><strong>Coletada:</strong> <span data-tempo="{{ device_status.reading.collected_at }}">—</span></p>
-        <p class="mono dim">{{ device_status.reading.collected_at }} UTC</p>
+        <p><strong>Coletada:</strong> <span data-tempo-leitura data-tempo="{{ device_status.reading.collected_at }}">—</span></p>
+        <p class="mono dim" id="carimboLocal"
+           data-quando="{{ device_status.reading.collected_at }}">—</p>
         <details>
-            <summary>Ver DPs brutos</summary>
-            <pre>{{ device_status.reading.dps_json }}</pre>
+            <summary>Ver DPs da leitura</summary>
+            <pre id="dpsBrutos">{{ device_status.reading.dps_json }}</pre>
         </details>
         {% else %}
         <p class="dim">Nenhuma leitura registrada ainda.</p>
@@ -226,7 +233,7 @@
 <div class="reading-detail-container">
     <div class="chart-head">
         <h3>O que veio na última coleta</h3>
-        <span class="reading-timestamp" data-tempo="{{ device_status.reading.collected_at }}">—</span>
+        <span class="reading-timestamp" data-tempo-leitura data-tempo="{{ device_status.reading.collected_at }}">—</span>
     </div>
     <div class="dps-detail-grid" id="dpsDetailGrid"></div>
 </div>
@@ -235,8 +242,12 @@
 
 {% block extra_js %}
 <script>
-const dadosSeries = {{ chart_data|safe }};
+const SERIES_INICIAIS = {{ chart_data|safe }};
 const DEVICE_ID = '{{ device_status.device.id }}';
+// Ritmo padrão da atualização: um aparelho ACIONÁVEL muda de estado por ação e
+// precisa confirmar o comando em segundos; um que só mede não tem nada de novo
+// a dizer antes do próximo ciclo do coletor, então segue o intervalo dele.
+const REFRESH_PADRAO = {{ 10 if device_status.acionavel else (device_status.config.poll_interval_seconds or 60) }};
 
 async function alternarAcionavel(el) {
     const ligando = !el.classList.contains('on');
@@ -300,27 +311,36 @@ const EXPLICACOES = {
     "cur_voltage_2": "Voltagem canal 2 — voltagem do canal 2 em V"
 };
 
+// `dadosSeries` é reatribuído a cada atualização automática — por isso `let`.
+let dadosSeries = SERIES_INICIAIS;
+
 // Cor por DP, a partir do código — não da posição no array. Ocultar uma série
-// não repinta as outras.
-const CORES = coresDeSeries(dadosSeries, (s) => s.code);
+// não repinta as outras, e uma série nova não muda a cor das antigas.
+let CORES = coresDeSeries(dadosSeries, (s) => s.code);
 const visiveis = {};
 dadosSeries.forEach((s) => { visiveis[s.code] = true; });
 
 let grafico = null;
+let assinaturaSeries = '';
+
+/** O valor mais recente de uma série, já com a unidade do DP. */
+function ultimoDaSerie(serie) {
+    const ultimo = serie.data.length ? serie.data[serie.data.length - 1].value : null;
+    return numeroComUnidade(ultimo, serie.unit, serie.casas);
+}
 
 function montarLegenda() {
     const legenda = document.getElementById('dpsLegend');
     legenda.innerHTML = '';
 
     dadosSeries.forEach((serie) => {
-        const ultimo = serie.data.length ? serie.data[serie.data.length - 1].value : null;
         const item = document.createElement('span');
-        item.className = 'dps-legend-item';
+        item.className = 'dps-legend-item' + (visiveis[serie.code] === false ? ' off' : '');
         item.innerHTML =
             '<span class="legend-color" style="background-color: ' + CORES[serie.code] + '"></span>' +
             '<span></span><span class="valor"></span>';
         item.children[1].textContent = serie.label;
-        item.children[2].textContent = ultimo === null ? '—' : numero(ultimo, 1);
+        item.children[2].textContent = ultimoDaSerie(serie);
         item.addEventListener('click', () => {
             visiveis[serie.code] = !visiveis[serie.code];
             item.classList.toggle('off', !visiveis[serie.code]);
@@ -342,23 +362,34 @@ function desenhar() {
     if (!canvas || !dadosSeries.length) return;
 
     const datasets = dadosSeries
-        .filter((s) => visiveis[s.code])
+        .filter((s) => visiveis[s.code] !== false)
         .map((s) => datasetDeSerie(
             s.label,
             s.data.map((p) => ({ x: p.timestamp, y: p.value })),
             CORES[s.code]
         ));
 
+    // Recriar o Chart a cada atualização faria o gráfico piscar de dez em dez
+    // segundos. Enquanto o CONJUNTO de séries visíveis não muda, os dados são
+    // trocados no lugar; só um DP novo (ou um clique na legenda) reconstrói.
+    const assinatura = datasets.map((d) => d.label).join('|');
+    if (grafico && assinatura === assinaturaSeries) {
+        grafico.data.datasets.forEach((ds, i) => { ds.data = datasets[i].data; });
+        grafico.update('none');
+        return;
+    }
+
     if (grafico) grafico.destroy();
     grafico = new Chart(canvas.getContext('2d'), configGraficoLinha(datasets));
+    assinaturaSeries = assinatura;
 }
 
 function montarDetalhes() {
     const grade = document.getElementById('dpsDetailGrid');
     if (!grade) return;
+    grade.innerHTML = '';
 
     dadosSeries.forEach((serie) => {
-        const ultimo = serie.data.length ? serie.data[serie.data.length - 1].value : null;
         const card = document.createElement('div');
         card.className = 'dps-detail-card';
 
@@ -380,7 +411,7 @@ function montarDetalhes() {
         valor.className = 'dps-value';
         const destaque = document.createElement('span');
         destaque.className = 'value-highlight';
-        destaque.textContent = ultimo === null ? '—' : numero(ultimo, 1);
+        destaque.textContent = ultimoDaSerie(serie);
         valor.appendChild(destaque);
 
         card.appendChild(cab);
@@ -409,8 +440,61 @@ async function alternarMonitor(el, deviceId) {
     }
 }
 
+/** Repinta os botões e selects de ação com o estado que veio do servidor. */
+function pintarAcoes(acoes) {
+    acoes.forEach((a) => {
+        const botao = document.querySelector('.btn-poder[data-dp="' + a.dp + '"]');
+        if (botao) {
+            const ligado = a.valor === true;
+            botao.classList.toggle('on', ligado);
+            botao.title = ligado ? 'Ligado' : 'Desligado';
+            botao.setAttribute('data-valor', ligado ? '1' : '0');
+            const texto = botao.parentElement.parentElement
+                                .querySelector('.valor-atual');
+            if (texto) {
+                texto.textContent = a.valor === true ? 'ligado'
+                    : (a.valor === false ? 'desligado' : 'estado desconhecido');
+            }
+        }
+        const sel = document.querySelector('select[data-dp="' + a.dp + '"]');
+        // Não mexe num select que o usuário está usando: sobrescrever a escolha
+        // dele no meio de um clique seria pior que mostrar um estado velho.
+        if (sel && a.valor !== null && a.valor !== undefined
+            && document.activeElement !== sel) {
+            sel.value = String(a.valor);
+        }
+    });
+}
+
+async function atualizar() {
+    const dados = await apiGet('/devices/' + DEVICE_ID + '/api/estado');
+
+    dadosSeries = dados.chart_data;
+    CORES = coresDeSeries(dadosSeries, (s) => s.code);
+    dadosSeries.forEach((s) => {
+        if (visiveis[s.code] === undefined) visiveis[s.code] = true;
+    });
+
+    montarLegenda();
+    montarDetalhes();
+    desenhar();
+    pintarAcoes(dados.acoes);
+
+    if (dados.reading) {
+        document.querySelectorAll('[data-tempo-leitura]').forEach((el) => {
+            el.setAttribute('data-tempo', dados.reading.collected_at);
+        });
+        const bruto = document.getElementById('dpsBrutos');
+        if (bruto) bruto.textContent = dados.reading.dps_json;
+        const carimbo = document.getElementById('carimboLocal');
+        if (carimbo) carimbo.setAttribute('data-quando', dados.reading.collected_at);
+        pintarTempos();
+    }
+}
+
 montarLegenda();
 montarDetalhes();
 desenhar();
+autoAtualizar(atualizar, { chave: 'device', padraoSegundos: REFRESH_PADRAO });
 </script>
 {% endblock %}

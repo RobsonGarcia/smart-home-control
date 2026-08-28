@@ -6,6 +6,12 @@ from fastapi.responses import HTMLResponse
 
 from app.errors import NotFoundError, ValidationError
 from app.repository import (
+    create_panel,
+    delete_panel,
+    reordenar_paineis,
+    reordenar_series,
+    update_panel,
+    update_series,
     # Sentinela: distingue "campo ausente" de "enviado como null" (null em
     # scope_local_id significa tornar o grupo geral).
     _NAO_INFORMADO as _MANTEM,
@@ -24,7 +30,6 @@ from app.repository import (
 from app.dps_mapping import (
     get_common_dps_list,
     get_device_dps_list,
-    get_friendly_name,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,6 +106,9 @@ async def add_series(group_id: int, data: dict = Body(...)):
     device_id = data.get('device_id')
     dps_code = data.get('dps_code')
     label = data.get('label')
+    # Sem painel, a série cai no principal — quem chama não precisa saber que
+    # painéis existem.
+    panel_id = data.get('panel_id') or None
 
     if not all([device_id, dps_code, label]):
         raise ValidationError("device_id, dps_code e label obrigatórios")
@@ -108,9 +116,88 @@ async def add_series(group_id: int, data: dict = Body(...)):
     # Sem try/except de propósito: NotFoundError e ConflictError sobem para o
     # handler em main.py e viram 404/409 com a mensagem. Um `except Exception`
     # aqui engoliria justamente a recusa de série fora do local.
-    series_id = add_series_to_group(group_id, device_id, dps_code, label)
+    series_id = add_series_to_group(
+        group_id, device_id, dps_code, label,
+        panel_id=int(panel_id) if panel_id else None)
     return {"id": series_id, "device_id": device_id, "dps_code": dps_code,
-            "label": label}
+            "label": label, "panel_id": panel_id}
+
+
+# --- painéis ---------------------------------------------------------------
+#
+# ATENÇÃO à ordem de declaração: FastAPI casa na ordem em que as rotas são
+# registradas, e "/paineis/ordem" casaria com "/paineis/{painel_id}" se este
+# viesse antes — a reordenação viraria uma tentativa de editar o painel de id
+# "ordem". As rotas literais vêm primeiro, sempre.
+
+@router.post("/{group_id}/paineis", status_code=201)
+async def criar_painel(group_id: int, data: dict = Body(...)):
+    """Cria um painel secundário no grupo."""
+    try:
+        return create_panel(group_id, data.get('nome'))
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Já existe um painel com esse nome neste grupo")
+
+
+@router.put("/{group_id}/paineis/ordem")
+async def ordenar_paineis(group_id: int, data: dict = Body(...)):
+    """
+    Aplica a ordem dos painéis de uma vez.
+
+    Recebe a lista inteira em vez de um "sobe um": vira uma escrita só,
+    idempotente, sem estado intermediário se alguém clicar rápido.
+    """
+    ordem = data.get('ordem')
+    if not isinstance(ordem, list):
+        raise ValidationError("'ordem' deve ser uma lista de ids de painel")
+    return {"paineis": reordenar_paineis(group_id, ordem)}
+
+
+@router.put("/{group_id}/paineis/{painel_id}")
+async def editar_painel(group_id: int, painel_id: int, data: dict = Body(...)):
+    """Renomeia o painel e/ou o torna o principal do grupo."""
+    try:
+        return update_panel(group_id, painel_id,
+                            nome=data.get('nome'),
+                            principal=bool(data.get('principal')))
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Já existe um painel com esse nome neste grupo")
+
+
+@router.delete("/{group_id}/paineis/{painel_id}")
+async def excluir_painel(group_id: int, painel_id: int):
+    """
+    Exclui o painel e MOVE as séries dele para o principal.
+
+    Nenhuma série é apagada — a resposta diz quantas mudaram de lugar e para
+    onde, para a tela poder contar isso a quem clicou.
+    """
+    return delete_panel(group_id, painel_id)
+
+
+# --- séries ----------------------------------------------------------------
+
+@router.put("/{group_id}/series/ordem")
+async def ordenar_series(group_id: int, data: dict = Body(...)):
+    """Aplica a ordem das séries de uma vez. Mesma razão de /paineis/ordem."""
+    ordem = data.get('ordem')
+    if not isinstance(ordem, list):
+        raise ValidationError("'ordem' deve ser uma lista de ids de série")
+    reordenar_series(group_id, ordem)
+    return {"ok": True}
+
+
+@router.put("/{group_id}/series/{series_id}")
+async def editar_serie(group_id: int, series_id: int, data: dict = Body(...)):
+    """Renomeia a série e/ou a move para outro painel do MESMO grupo."""
+    painel = data['panel_id'] if 'panel_id' in data else _MANTEM
+    return update_series(group_id, series_id,
+                         label=data.get('label'),
+                         panel_id=painel)
 
 
 @router.delete("/{group_id}/series/{series_id}")
@@ -130,7 +217,6 @@ async def get_device_dps(device_id: str):
         raise NotFoundError("Dispositivo %s não encontrado" % device_id)
 
     # Parsear mapping_json do device
-    import json
     mapping = {}
     if device_info.get('mapping_json'):
         try:
@@ -153,11 +239,19 @@ async def get_device_dps(device_id: str):
     }
 
 
+# Teto de pontos por série. Acima disso a série é afinada: um gráfico não
+# desenha mais do que tem pixel, e 30 dias de inversor são ~4.500 amostras.
+_MAX_PONTOS_SERIE = 900
+
+
 @router.get("/api/groups/{group_id}/data")
 async def get_group_data(group_id: int,
                         start: str = Query(None),
                         end: str = Query(None)):
     """Retorna dados de todas as séries de um grupo em um período."""
+    from app.dps_mapping import get_dp_info, unidade_exibivel
+    from app.repository import get_device
+
     group = get_comparison_group(group_id)
     if not group:
         raise NotFoundError("Grupo %s não encontrado" % group_id)
@@ -165,23 +259,62 @@ async def get_group_data(group_id: int,
     data = {
         'group_id': group_id,
         'name': group['name'],
-        'series': []
+        'paineis': []
     }
 
-    for series in group['series']:
-        readings = get_readings_for_series(
-            series['device_id'],
-            series['dps_code'],
-            start,
-            end
-        )
+    # Um grupo costuma repetir o mesmo aparelho em várias séries (potência e
+    # voltagem da mesma tomada); resolver o mapping uma vez por aparelho evita
+    # reparsear o mesmo JSON a cada série.
+    cache_device = {}
 
-        data['series'].append({
-            'id': series['id'],
-            'label': series['label'],
-            'device_id': series['device_id'],
-            'dps_code': series['dps_code'],
-            'data': readings
+    def _spec(device_id, dps_code):
+        if device_id not in cache_device:
+            device = get_device(device_id) or {}
+            mapping = {}
+            if device.get('mapping_json'):
+                try:
+                    mapping = json.loads(device['mapping_json']) or {}
+                except (ValueError, TypeError):
+                    mapping = {}
+            cache_device[device_id] = (device.get('category'), mapping)
+        categoria, mapping = cache_device[device_id]
+        return get_dp_info(dps_code, categoria, mapping)
+
+    for painel in group['paineis']:
+        series_do_painel = []
+        for series in painel['series']:
+            readings = get_readings_for_series(
+                series['device_id'],
+                series['dps_code'],
+                start,
+                end,
+                max_pontos=_MAX_PONTOS_SERIE
+            )
+
+            # A leitura já vem escalada do banco; o que falta é dizer de que
+            # grandeza ela é e com quantas casas mostrá-la.
+            info = _spec(series['device_id'], series['dps_code'])
+            series_do_painel.append({
+                'id': series['id'],
+                'label': series['label'],
+                'device_id': series['device_id'],
+                'dps_code': series['dps_code'],
+                'unit': unidade_exibivel(info),
+                'casas': info.get('scale') or None,
+                'data': readings
+            })
+
+        # A unidade do EIXO só existe quando o painel é homogêneo — que é a
+        # razão de os painéis existirem. Num painel misturado ela fica vazia,
+        # e o gráfico sai sem rótulo de eixo em vez de sair com um errado.
+        unidades = {s['unit'] for s in series_do_painel if s['unit']}
+        data['paineis'].append({
+            'id': painel['id'],
+            'nome': painel['nome'],
+            'principal': bool(painel['principal']),
+            'sort_order': painel['sort_order'],
+            'unidade': unidades.pop() if len(unidades) == 1 else '',
+            'series': series_do_painel,
         })
 
     return data

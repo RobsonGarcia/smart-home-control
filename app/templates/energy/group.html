@@ -11,6 +11,7 @@
 
 {% block topbar_actions %}
 <button class="btn" onclick="abrirEscopo()">{{ m.icone_svg('lapis') }} Escopo</button>
+<button class="btn" onclick="novoPainel()">{{ m.icone_svg('mais') }} Novo painel</button>
 <button class="btn btn-primary" onclick="abrirSerie()">{{ m.icone_svg('mais') }} Adicionar série</button>
 {% endblock %}
 
@@ -38,79 +39,130 @@
 
 <div class="filtros">
     <span class="rotulo">Período</span>
+    <span class="chip active" data-periodo="hoje" onclick="mudarPeriodo(this)">Hoje</span>
     <span class="chip" data-periodo="1h" onclick="mudarPeriodo(this)">Última hora</span>
     <span class="chip" data-periodo="6h" onclick="mudarPeriodo(this)">6 h</span>
-    <span class="chip active" data-periodo="24h" onclick="mudarPeriodo(this)">24 h</span>
+    <span class="chip" data-periodo="24h" onclick="mudarPeriodo(this)">24 h</span>
     <span class="chip" data-periodo="7d" onclick="mudarPeriodo(this)">7 dias</span>
     <span class="chip" data-periodo="30d" onclick="mudarPeriodo(this)">30 dias</span>
     <span class="muted" id="resumoPontos" style="font-size: 12.5px; margin-left: auto;"></span>
+    <span data-refresh></span>
 </div>
 
-<div class="chart-container">
-    <div class="chart-head">
-        <div id="legendaGrafico" class="dps-legend" style="margin: 0;"></div>
-        <span class="muted" style="font-size: 12px; white-space: nowrap;">Clique para ocultar uma série</span>
+{# ---------------------------------------------------------------- painéis #}
+{# Um bloco por painel, na ordem que o servidor mandou: o principal primeiro,
+   os secundários por sort_order. O Jinja emite a estrutura e o JS só preenche
+   os valores — mesmo padrão do resto da página.
+
+   Com um painel só, o cabeçalho não aparece: o <h1> do grupo está logo acima
+   e escrever "Principal" ali seria repetir o óbvio. É isso que faz um grupo
+   de uma unidade só continuar exatamente como era. #}
+{% set varios = group.paineis|length > 1 %}
+{% for p in group.paineis %}
+<section class="painel" data-painel="{{ p.id }}" data-nome="{{ p.nome }}">
+    {% if varios %}
+    <div class="painel-head">
+        <h2>{{ p.nome }}</h2>
+        {% if p.principal %}<span class="badge principal">principal</span>{% endif %}
+        <span class="rule"></span>
+        <span class="painel-acoes">
+            {% if not p.principal %}
+            <button class="btn btn-small btn-icon" title="Tornar o gráfico principal"
+                    onclick="tornarPrincipal({{ p.id }})">{{ m.icone_svg('estrela', 14) }}</button>
+            <button class="btn btn-small btn-icon" title="Subir"
+                    onclick="moverPainel({{ p.id }}, -1)">{{ m.icone_svg('cima', 14) }}</button>
+            <button class="btn btn-small btn-icon" title="Descer"
+                    onclick="moverPainel({{ p.id }}, 1)">{{ m.icone_svg('baixo', 14) }}</button>
+            {% endif %}
+            <button class="btn btn-small btn-icon" title="Renomear painel"
+                    onclick='renomearPainel({{ p.id }}, {{ p.nome|tojson }})'>{{ m.icone_svg('lapis', 14) }}</button>
+            <button class="btn btn-small btn-danger btn-icon" title="Excluir painel"
+                    onclick='excluirPainel({{ p.id }}, {{ p.nome|tojson }})'>{{ m.icone_svg('lixeira', 14) }}</button>
+        </span>
     </div>
-    <div style="height: 340px;"><canvas id="graficoGrupo"></canvas></div>
-</div>
+    {% endif %}
 
-<div class="section-rule">
-    <h3>Séries do grupo</h3>
-    <span class="meta">os mesmos números do gráfico, em tabela</span>
-    <span class="rule"></span>
-</div>
+    <div class="chart-container">
+        <div class="chart-head">
+            <div class="dps-legend" data-legenda style="margin: 0;"></div>
+            <span class="muted" style="font-size: 12px; white-space: nowrap;">Clique para ocultar uma série</span>
+        </div>
+        <div style="height: 340px;"><canvas data-canvas></canvas></div>
+        <p class="dim vazio-painel" style="display: none; font-size: 12.5px; margin: 10px 0 0;">
+            Sem pontos neste período.
+        </p>
+    </div>
 
-{% if group.series %}
-<table class="data-table">
-    <thead>
-        <tr>
-            <th>Série</th>
-            <th>Dispositivo</th>
-            <th>Local / cômodo</th>
-            <th>DP</th>
-            <th class="num">Atual</th>
-            <th class="num">Média</th>
-            <th class="num">Máx</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for s in group.series %}
-        <tr data-serie="{{ s.id }}">
-            <td>
-                <span style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-                    <span class="legend-color" data-serie-cor="{{ s.id }}"></span>
-                    <span style="font-weight: 500; color: var(--text-bright);">{{ s.label }}</span>
-                    {% if s.out_of_scope %}<span class="badge fora-do-local">fora do local</span>{% endif %}
-                    {% if s.device_missing %}<span class="badge sem-coleta">dispositivo removido</span>{% endif %}
-                </span>
-            </td>
-            <td class="muted">{{ s.device_name or s.device_id }}</td>
-            <td class="muted">
-                {%- if s.device_local_nome -%}
-                    {{ s.device_local_nome }}{% if s.device_comodo_nome %} · {{ s.device_comodo_nome }}{% endif %}
-                {%- else -%}<span class="dim">—</span>{%- endif -%}
-            </td>
-            <td class="mono dim">{{ s.dps_code }}</td>
-            <td class="num" data-col="atual">—</td>
-            <td class="num" data-col="media">—</td>
-            <td class="num" data-col="max">—</td>
-            <td style="text-align: right;">
-                <button class="btn btn-small btn-danger btn-icon" title="Remover série"
-                        onclick='removerSerie({{ s.id }}, {{ s.label|tojson }})'>
-                    {{ m.icone_svg('lixeira', 14) }}
-                </button>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<div class="empty-state">
-    <strong>Nenhuma série ainda</strong>
-    Adicione o primeiro canal para o gráfico ter o que desenhar.
-</div>
-{% endif %}
+    {% if p.series %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Série</th>
+                <th>Dispositivo</th>
+                <th>Local / cômodo</th>
+                <th>DP</th>
+                <th class="num">Atual</th>
+                <th class="num">Média</th>
+                <th class="num">Máx</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in p.series %}
+            <tr data-serie="{{ s.id }}">
+                <td>
+                    <span style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                        <span class="legend-color" data-serie-cor="{{ s.id }}"></span>
+                        <span style="font-weight: 500; color: var(--text-bright);">{{ s.label }}</span>
+                        {% if s.out_of_scope %}<span class="badge fora-do-local">fora do local</span>{% endif %}
+                        {% if s.device_missing %}<span class="badge sem-coleta">dispositivo removido</span>{% endif %}
+                    </span>
+                </td>
+                <td class="muted">{{ s.device_name or s.device_id }}</td>
+                <td class="muted">
+                    {%- if s.device_local_nome -%}
+                        {{ s.device_local_nome }}{% if s.device_comodo_nome %} · {{ s.device_comodo_nome }}{% endif %}
+                    {%- else -%}<span class="dim">—</span>{%- endif -%}
+                </td>
+                <td class="mono dim">{{ s.dps_code }}</td>
+                <td class="num" data-col="atual">—</td>
+                <td class="num" data-col="media">—</td>
+                <td class="num" data-col="max">—</td>
+                <td class="col-acoes">
+                    <span class="serie-acoes">
+                        {% if varios %}
+                        <select class="select-inline" title="Mover para outro painel"
+                                onchange="moverSerie({{ s.id }}, this.value)">
+                            {% for destino in group.paineis %}
+                            <option value="{{ destino.id }}" {% if destino.id == p.id %}selected{% endif %}>{{ destino.nome }}</option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                        {% if p.series|length > 1 %}
+                        <button class="btn btn-small btn-icon" title="Subir"
+                                onclick="moverSerie({{ s.id }}, null, -1)">{{ m.icone_svg('cima', 14) }}</button>
+                        <button class="btn btn-small btn-icon" title="Descer"
+                                onclick="moverSerie({{ s.id }}, null, 1)">{{ m.icone_svg('baixo', 14) }}</button>
+                        {% endif %}
+                        <button class="btn btn-small btn-icon" title="Renomear série"
+                                onclick='renomearSerie({{ s.id }}, {{ s.label|tojson }})'>{{ m.icone_svg('lapis', 14) }}</button>
+                        <button class="btn btn-small btn-danger btn-icon" title="Remover série"
+                                onclick='removerSerie({{ s.id }}, {{ s.label|tojson }})'>{{ m.icone_svg('lixeira', 14) }}</button>
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <strong>Painel sem séries</strong>
+        {% if varios %}Use "Adicionar série" e escolha <em>{{ p.nome }}</em> como destino.
+        {% else %}Adicione o primeiro canal para o gráfico ter o que desenhar.{% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endfor %}
 
 <!-- ------------------------------------------------ modal: adicionar série -->
 <div id="modalSerie" class="modal">
@@ -151,6 +203,17 @@
                     <input type="text" id="serieLabel" placeholder="preenchido a partir do DP se ficar vazio">
                 </div>
 
+                {% if group.paineis|length > 1 %}
+                <div class="campo">
+                    <label for="seriePainel">Painel</label>
+                    <select id="seriePainel">
+                        {% for p in group.paineis %}
+                        <option value="{{ p.id }}">{{ p.nome }}{% if p.principal %} (principal){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
                 {% if group.scope_local_id %}
                 <div class="aviso accent">
                     {{ m.icone_svg('info', 16) }}
@@ -161,9 +224,10 @@
 
                 <div class="aviso">
                     {{ m.icone_svg('info', 16) }}
-                    <span>Mantenha o grupo numa unidade só. Misturar W e kWh no mesmo gráfico exigiria
-                    dois eixos, e duas escalas arbitrárias inventam uma correlação que não existe —
-                    crie outro grupo para a outra unidade.</span>
+                    <span>Mantenha cada <strong>painel</strong> numa unidade só. Misturar W e kWh no
+                    mesmo gráfico exigiria dois eixos, e duas escalas arbitrárias inventam uma
+                    correlação que não existe — a outra unidade merece um painel próprio, aqui no
+                    mesmo grupo.</span>
                 </div>
             </div>
             <div class="modal-foot">
@@ -212,37 +276,59 @@
 {% block extra_js %}
 <script>
 const GRUPO_ID = {{ group.id }};
-const SERIES = [
-    {% for s in group.series %}
-    { id: {{ s.id }}, label: {{ s.label|tojson }}, dps: {{ s.dps_code|tojson }},
-      fora: {{ 'true' if s.out_of_scope else 'false' }} }{{ ',' if not loop.last }}
-    {% endfor %}
-];
 
-// Cor por id da série. Ocultar ou remover uma não repinta as outras.
-const CORES = coresDeSeries(SERIES);
+/* ------------------------------------------------------------------ estado */
+
+// Um Chart e uma assinatura POR PAINEL. Antes eram variaveis unicas, porque
+// havia um grafico so; agora cada painel tem o seu, e a assinatura e o que
+// permite trocar os pontos no lugar em vez de recriar o Chart a cada
+// atualizacao automatica (recriar faria a pagina inteira piscar de minuto em
+// minuto e perderia as series escondidas na legenda).
+const graficos = {};
+const assinaturas = {};
+
+// Visibilidade por serie, chaveada pelo id da serie -- sobrevive a troca de
+// periodo e ao refresh, e nao se confunde entre paineis.
 const visiveis = {};
-SERIES.forEach((s) => { visiveis[s.id] = true; });
 
-let grafico = null;
-let periodo = '24h';
+// Cor por serie, calculada POR PAINEL. A paleta recomecar em cada painel e
+// deliberado: com as mesmas plantas na mesma ordem em "Potencia" e em
+// "Geracao", cada planta fica com uma cor so na pagina inteira -- que e
+// exatamente a comparacao que os paineis existem para permitir.
+const cores = {};
 
-document.querySelectorAll('[data-serie-cor]').forEach((el) => {
-    el.style.backgroundColor = CORES[el.dataset.serieCor];
-});
+let periodo = 'hoje';
+
+/* ----------------------------------------------------------------- periodo */
 
 function inicioDoPeriodo() {
     const agora = new Date();
     const inicio = new Date();
-    if (periodo === '1h') inicio.setHours(inicio.getHours() - 1);
+    // "Hoje" é o único que recorta o DIA CIVIL, e no fuso de QUEM OLHA: a
+    // meia-noite local, não a de Greenwich. Os outros são janelas móveis
+    // contadas a partir de agora.
+    if (periodo === 'hoje') inicio.setHours(0, 0, 0, 0);
+    else if (periodo === '1h') inicio.setHours(inicio.getHours() - 1);
     else if (periodo === '6h') inicio.setHours(inicio.getHours() - 6);
     else if (periodo === '24h') inicio.setDate(inicio.getDate() - 1);
     else if (periodo === '7d') inicio.setDate(inicio.getDate() - 7);
     else if (periodo === '30d') inicio.setDate(inicio.getDate() - 30);
-    // O backend compara com collected_at, que está em UTC.
+    // O backend compara com collected_at, que está em UTC — toISOString já
+    // faz a conversão do horário local para lá.
     const iso = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
     return { inicio: iso(inicio), fim: iso(agora) };
 }
+
+function mudarPeriodo(el) {
+    document.querySelectorAll('[data-periodo]').forEach((c) => c.classList.remove('active'));
+    el.classList.add('active');
+    periodo = el.getAttribute('data-periodo');
+    // O eixo inteiro muda de escala; reconstruir é o certo aqui.
+    Object.keys(assinaturas).forEach((k) => delete assinaturas[k]);
+    carregarDados();
+}
+
+/* ------------------------------------------------------------------ dados */
 
 async function carregarDados() {
     const { inicio, fim } = inicioDoPeriodo();
@@ -253,13 +339,11 @@ async function carregarDados() {
     if (!dados) return;
 
     let pontos = 0;
-    dados.series.forEach((s) => { pontos += s.data.length; });
+    dados.paineis.forEach((p) => p.series.forEach((s) => { pontos += s.data.length; }));
     document.getElementById('resumoPontos').textContent =
         pontos + ' ponto' + (pontos === 1 ? '' : 's') + ' no período';
 
-    montarLegenda(dados.series);
-    preencherTabela(dados.series);
-    desenhar(dados.series);
+    dados.paineis.forEach(renderizarPainel);
 }
 
 function estatisticas(serie) {
@@ -269,22 +353,45 @@ function estatisticas(serie) {
     return { atual: vals[vals.length - 1], media: soma / vals.length, max: Math.max.apply(null, vals) };
 }
 
-function montarLegenda(series) {
-    const legenda = document.getElementById('legendaGrafico');
+/** Um número desta série com a unidade e a precisão que o DP declara. */
+function comUnidade(serie, v) {
+    return numeroComUnidade(v, serie.unit, serie.casas);
+}
+
+/* -------------------------------------------------------------- desenho */
+
+function renderizarPainel(painel) {
+    const bloco = document.querySelector('section[data-painel="' + painel.id + '"]');
+    if (!bloco) return;   // painel criado noutra aba; o proximo reload o traz
+
+    cores[painel.id] = coresDeSeries(painel.series);
+    painel.series.forEach((s) => {
+        if (visiveis[s.id] === undefined) visiveis[s.id] = true;
+    });
+
+    montarLegenda(bloco, painel);
+    preencherTabela(bloco, painel);
+    desenhar(bloco, painel);
+}
+
+function montarLegenda(bloco, painel) {
+    const legenda = bloco.querySelector('[data-legenda]');
+    const CORES = cores[painel.id];
     legenda.innerHTML = '';
 
-    series.forEach((serie) => {
+    painel.series.forEach((serie) => {
         const est = estatisticas(serie);
         const item = document.createElement('span');
         item.className = 'dps-legend-item' + (visiveis[serie.id] ? '' : ' off');
         item.innerHTML = '<span class="legend-color"></span><span></span><span class="valor"></span>';
         item.children[0].style.backgroundColor = CORES[serie.id];
         item.children[1].textContent = serie.label;
-        item.children[2].textContent = est ? numero(est.atual, 1) : 'sem dados';
+        item.children[2].textContent = est ? comUnidade(serie, est.atual) : 'sem dados';
         item.addEventListener('click', () => {
             visiveis[serie.id] = !visiveis[serie.id];
             item.classList.toggle('off', !visiveis[serie.id]);
-            desenhar(series);
+            delete assinaturas[painel.id];
+            desenhar(bloco, painel);
         });
         legenda.appendChild(item);
     });
@@ -297,45 +404,161 @@ function montarLegenda(series) {
     }
 }
 
-function preencherTabela(series) {
-    series.forEach((serie) => {
-        const linha = document.querySelector('tr[data-serie="' + serie.id + '"]');
+function preencherTabela(bloco, painel) {
+    const CORES = cores[painel.id];
+    painel.series.forEach((serie) => {
+        const linha = bloco.querySelector('tr[data-serie="' + serie.id + '"]');
         if (!linha) return;
+        const ponto = linha.querySelector('[data-serie-cor]');
+        if (ponto) ponto.style.backgroundColor = CORES[serie.id];
         const est = estatisticas(serie);
-        linha.querySelector('[data-col="atual"]').textContent = est ? numero(est.atual, 1) : 'sem dados';
-        linha.querySelector('[data-col="media"]').textContent = est ? numero(est.media, 1) : '—';
-        linha.querySelector('[data-col="max"]').textContent = est ? numero(est.max, 1) : '—';
+        linha.querySelector('[data-col="atual"]').textContent = est ? comUnidade(serie, est.atual) : 'sem dados';
+        linha.querySelector('[data-col="media"]').textContent = est ? comUnidade(serie, est.media) : '—';
+        linha.querySelector('[data-col="max"]').textContent = est ? comUnidade(serie, est.max) : '—';
     });
 }
 
-function desenhar(series) {
-    const canvas = document.getElementById('graficoGrupo');
+function desenhar(bloco, painel) {
+    const canvas = bloco.querySelector('[data-canvas]');
     if (!canvas) return;
 
-    const datasets = series
-        .filter((s) => visiveis[s.id])
-        .map((s) => datasetDeSerie(
-            s.label,
-            s.data.map((p) => ({ x: p.timestamp, y: p.value })),
-            CORES[s.id]
-        ));
+    const visiveisDoPainel = painel.series.filter((s) => visiveis[s.id]);
+    const temPontos = visiveisDoPainel.some((s) => s.data.length);
+    bloco.querySelector('.vazio-painel').style.display = temPontos ? 'none' : '';
 
-    if (grafico) grafico.destroy();
-    grafico = new Chart(canvas.getContext('2d'), configGraficoLinha(datasets));
+    const datasets = visiveisDoPainel.map((s) => datasetDeSerie(
+        s.label,
+        s.data.map((p) => ({ x: p.timestamp, y: p.value })),
+        cores[painel.id][s.id]
+    ));
+
+    // Enquanto o conjunto de séries visíveis não muda, os pontos são trocados
+    // no lugar — é o que impede o gráfico de piscar a cada refresh automático.
+    const assinatura = datasets.map((d) => d.label).join('|');
+    if (graficos[painel.id] && assinaturas[painel.id] === assinatura) {
+        graficos[painel.id].data.datasets.forEach((ds, i) => { ds.data = datasets[i].data; });
+        graficos[painel.id].update('none');
+        return;
+    }
+
+    if (graficos[painel.id]) graficos[painel.id].destroy();
+    // A unidade só chega aqui quando o painel é homogêneo — é o eixo Y
+    // rotulado que os painéis tornaram possível.
+    graficos[painel.id] = new Chart(canvas.getContext('2d'),
+                                    configGraficoLinha(datasets, { unidade: painel.unidade }));
+    assinaturas[painel.id] = assinatura;
 }
 
-function mudarPeriodo(el) {
-    document.querySelectorAll('[data-periodo]').forEach((c) => c.classList.remove('active'));
-    el.classList.add('active');
-    periodo = el.getAttribute('data-periodo');
-    carregarDados();
+/* ---------------------------------------------------------------- painéis */
+
+const PAINEIS = {{ group.paineis | map(attribute='id') | list | tojson }};
+
+async function novoPainel() {
+    const nome = await pedirTexto(
+        'Um painel é um gráfico com o eixo dele. Use um por grandeza: potência em\n'
+        + 'W num, geração em kWh noutro.',
+        { titulo: 'Novo painel', rotulo: 'Criar', placeholder: 'ex: Geração no dia' });
+    if (!nome) return;
+    await executar(() => apiPost('/energy/' + GRUPO_ID + '/paineis', { nome: nome }),
+                   'Painel criado', () => recarregar());
+}
+
+async function renomearPainel(id, atual) {
+    const nome = await pedirTexto('Novo nome do painel:',
+                                  { titulo: 'Renomear painel', rotulo: 'Salvar', valor: atual });
+    if (!nome || nome === atual) return;
+    await executar(() => apiPut('/energy/' + GRUPO_ID + '/paineis/' + id, { nome: nome }),
+                   'Painel renomeado', () => recarregar());
+}
+
+async function tornarPrincipal(id) {
+    await executar(() => apiPut('/energy/' + GRUPO_ID + '/paineis/' + id, { principal: true }),
+                   'Painel principal trocado', () => recarregar());
+}
+
+async function moverPainel(id, direcao) {
+    // Só os secundários se movem: o principal abre a página por definição.
+    const ordem = PAINEIS.slice();
+    const secundarios = ordem.slice(1);
+    const i = secundarios.indexOf(id);
+    const j = i + direcao;
+    if (i < 0 || j < 0 || j >= secundarios.length) return;
+    secundarios[i] = secundarios[j];
+    secundarios[j] = id;
+    await executar(
+        () => apiPut('/energy/' + GRUPO_ID + '/paineis/ordem',
+                     { ordem: [ordem[0]].concat(secundarios) }),
+        null, () => recarregar(300));
+}
+
+async function excluirPainel(id, nome) {
+    const ok = await confirmar(
+        'Excluir o painel "' + nome + '"?\nAs séries dele NÃO são apagadas — voltam para o gráfico principal.',
+        { titulo: 'Excluir painel', rotulo: 'Excluir', perigo: true });
+    if (!ok) return;
+    await executar(
+        () => apiDelete('/energy/' + GRUPO_ID + '/paineis/' + id),
+        null,
+        (r) => {
+            toastOk(r.series_movidas
+                ? 'Painel excluído — ' + r.series_movidas + ' série(s) foram para "' + r.destino_nome + '"'
+                : 'Painel excluído');
+            recarregar(900);
+        });
+}
+
+/* ----------------------------------------------------------------- séries */
+
+async function moverSerie(id, painelId, direcao) {
+    if (direcao) {
+        // A ordem é global no grupo, mas o botão move dentro do painel. Como
+        // o DOM já está na ordem do servidor (painel a painel), trocar duas
+        // linhas VIZINHAS do mesmo painel é trocar duas posições vizinhas da
+        // lista global — e é ela que a API recebe, inteira.
+        const bloco = document.querySelector('tr[data-serie="' + id + '"]').closest('section');
+        const idsDe = (raiz) => Array.from(raiz.querySelectorAll('tr[data-serie]'))
+                                     .map((tr) => parseInt(tr.dataset.serie, 10));
+
+        const noPainel = idsDe(bloco);
+        const j = noPainel.indexOf(id) + direcao;
+        if (j < 0 || j >= noPainel.length) return;
+        const vizinho = noPainel[j];
+
+        const ordem = idsDe(document);
+        const a = ordem.indexOf(id);
+        const b = ordem.indexOf(vizinho);
+        ordem[a] = vizinho;
+        ordem[b] = id;
+
+        await executar(() => apiPut('/energy/' + GRUPO_ID + '/series/ordem', { ordem: ordem }),
+                       null, () => recarregar(300));
+        return;
+    }
+
+    await executar(() => apiPut('/energy/' + GRUPO_ID + '/series/' + id,
+                                { panel_id: parseInt(painelId, 10) }),
+                   'Série movida', () => recarregar(300));
+}
+
+async function renomearSerie(id, atual) {
+    const label = await pedirTexto('Novo rótulo da série:',
+                                   { titulo: 'Renomear série', rotulo: 'Salvar', valor: atual });
+    if (!label || label === atual) return;
+    await executar(() => apiPut('/energy/' + GRUPO_ID + '/series/' + id, { label: label }),
+                   'Série renomeada', () => recarregar());
 }
 
 /* --------------------------------------------------------- adicionar série */
 
 let dispositivosDoEscopo = [];
 
-async function abrirSerie() {
+async function abrirSerie(painelId) {
+    // Chamado de dentro de um painel, o modal ja abre com aquele destino
+    // escolhido -- adicionar uma serie ao painel que voce esta olhando nao
+    // deveria custar um segundo clique num seletor.
+    const selPainel = document.getElementById('seriePainel');
+    if (selPainel && painelId) selPainel.value = String(painelId);
+
     abrirModal('modalSerie');
     const sel = document.getElementById('serieDevice');
     const dados = await executar(() => apiGet('/energy/api/groups/' + GRUPO_ID + '/devices'));
@@ -417,11 +640,16 @@ async function adicionarSerie(ev) {
         label = (opt && opt.dataset.nome) || dps;
     }
 
+    // O seletor de painel só existe quando há mais de um; sem ele a série cai
+    // no principal, que é o que o servidor faz por padrão.
+    const selPainel = document.getElementById('seriePainel');
+
     await executar(
         () => apiPost('/energy/' + GRUPO_ID + '/series', {
             device_id: document.getElementById('serieDevice').value,
             dps_code: dps,
-            label: label
+            label: label,
+            panel_id: selPainel ? parseInt(selPainel.value, 10) : null
         }),
         'Série adicionada',
         () => { fecharModal('modalSerie'); recarregar(); }
@@ -456,5 +684,6 @@ async function salvarEscopo(ev) {
 }
 
 carregarDados();
+autoAtualizar(carregarDados, { chave: 'energia', padraoSegundos: 60 });
 </script>
 {% endblock %}

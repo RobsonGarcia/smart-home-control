@@ -430,11 +430,64 @@ function numero(v, casas) {
     return Number(v).toFixed(casas === undefined ? 0 : casas).replace('.', ',');
 }
 
-function haQuantoTempo(iso) {
-    if (!iso) return 'nunca';
-    // collected_at chega em UTC, sem sufixo de fuso: o Z evita o navegador
-    // interpretar como hora local e mostrar diferença de fuso inteira.
+/**
+ * Um valor de leitura com a unidade que ele tem.
+ *
+ * `casas` vem do `scale` do Tuya, que é a precisão que o aparelho DECLARA:
+ * scale 1 são décimos (126,5 V), scale 3 são milésimos (0,029 kWh). Aí o
+ * número é mostrado exatamente com essa precisão, zeros à direita inclusive —
+ * "43,0 W" diz que o aparelho mede décimos de watt.
+ *
+ * Sem escala declarada não há precisão a afirmar, e arredondar por conta
+ * própria mente nas duas direções: fixar uma casa transformaria 391 mA em
+ * "391,0" e 60,01 Hz em "60,0". Nesse caso o valor decide — até duas casas,
+ * sem zeros à direita. Os canais solares caem aqui: o driver já entrega em
+ * unidade real e nunca declarou escala.
+ */
+function numeroComUnidade(v, unidade, casas) {
+    if (v === null || v === undefined || isNaN(v)) return '—';
+    const texto = (casas === null || casas === undefined)
+        ? Number(v).toFixed(2).replace(/\.?0+$/, '').replace('.', ',')
+        : numero(v, casas);
+    return texto + (unidade ? ' ' + unidade : '');
+}
+
+/**
+ * O instante que o banco gravou, como Date.
+ *
+ * `collected_at` e `created_at` são gravados em UTC pelo CURRENT_TIMESTAMP do
+ * SQLite e chegam SEM sufixo de fuso ("2026-08-28 14:37:26"). O `Z` é o que
+ * impede o navegador de lê-los como hora local — sem ele a diferença de fuso
+ * inteira (3 h no Brasil) entra em tudo: o "há X min" fica errado e a hora
+ * absoluta aponta para o futuro.
+ */
+function instanteDe(iso) {
+    if (!iso) return null;
     const t = new Date(iso.replace(' ', 'T') + (/[Zz+]/.test(iso) ? '' : 'Z'));
+    return isNaN(t.getTime()) ? null : t;
+}
+
+/**
+ * A mesma hora no fuso de QUEM ESTÁ OLHANDO.
+ *
+ * O banco guarda UTC de propósito (é o único fuso que não muda de opinião com
+ * horário de verão), mas ninguém lê o painel em UTC — "14:37" para um aparelho
+ * que respondeu às 11:37 é uma informação errada por três horas. A conversão
+ * mora aqui, no único ponto por onde toda data absoluta passa.
+ */
+function dataLocal(iso, comSegundos) {
+    const t = instanteDe(iso);
+    if (!t) return '—';
+    const dd = (n) => String(n).padStart(2, '0');
+    const data = dd(t.getDate()) + '/' + dd(t.getMonth() + 1) + '/' + t.getFullYear();
+    const hora = dd(t.getHours()) + ':' + dd(t.getMinutes())
+               + (comSegundos === false ? '' : ':' + dd(t.getSeconds()));
+    return data + ' ' + hora;
+}
+
+function haQuantoTempo(iso) {
+    const t = instanteDe(iso);
+    if (!t) return 'nunca';
     const seg = Math.floor((Date.now() - t.getTime()) / 1000);
     if (!isFinite(seg)) return 'nunca';
     if (seg < 60) return 'há ' + Math.max(seg, 0) + ' s';
@@ -443,12 +496,121 @@ function haQuantoTempo(iso) {
     return 'há ' + Math.floor(seg / 86400) + ' dias';
 }
 
-/** Preenche todo [data-tempo] com o "há X" correspondente. */
+/**
+ * Repinta as datas da página.
+ *
+ * `[data-tempo]` mostra o relativo ("há 3 min"), que é o que responde à
+ * pergunta de quem olha um painel — "isto está vivo?". O absoluto vai no
+ * `title` do mesmo elemento: a hora exata importa quando algo deu errado, e
+ * aí ela está a um passar de mouse, em hora local, sem ocupar a tela.
+ * `[data-quando]` é para onde a hora exata é o próprio conteúdo.
+ */
 function pintarTempos() {
     document.querySelectorAll('[data-tempo]').forEach((el) => {
-        el.textContent = haQuantoTempo(el.getAttribute('data-tempo'));
+        const iso = el.getAttribute('data-tempo');
+        el.textContent = haQuantoTempo(iso);
+        if (iso) el.title = dataLocal(iso);
+    });
+    document.querySelectorAll('[data-quando]').forEach((el) => {
+        el.textContent = dataLocal(el.getAttribute('data-quando'));
     });
 }
 
 document.addEventListener('DOMContentLoaded', pintarTempos);
 setInterval(pintarTempos, 30000);
+
+/* --------------------------------------------------- atualização automática */
+
+/**
+ * Repete `fn` num intervalo escolhido pelo usuário, e desenha o seletor.
+ *
+ * Três decisões que não são detalhe:
+ *
+ *  - PAUSA COM A ABA OCULTA. Um painel esquecido aberto num monitor de canto
+ *    bateria no banco (e, na tela solar, na nuvem do fabricante) a noite
+ *    inteira sem ninguém olhando. Ao voltar para a aba ele atualiza na hora,
+ *    então a pausa não custa nada em percepção.
+ *  - NÃO SOBREPÕE EXECUÇÕES. Se um tick ainda está em voo quando o próximo
+ *    vence, o próximo é descartado — uma consulta lenta não vira uma fila.
+ *  - A ESCOLHA PERSISTE por tela (localStorage sob `chave`). Quem desligou o
+ *    refresh não quer reencontrá-lo ligado ao voltar.
+ *
+ * Devolve { agora() } para quem precisa forçar uma atualização (troca de
+ * período, por exemplo) sem duplicar o ciclo.
+ */
+const OPCOES_REFRESH = [
+    { valor: 0, rotulo: 'Desligado' },
+    { valor: 10, rotulo: '10 s' },
+    { valor: 30, rotulo: '30 s' },
+    { valor: 60, rotulo: '1 min' },
+    { valor: 300, rotulo: '5 min' }
+];
+
+function autoAtualizar(fn, opcoes) {
+    opcoes = opcoes || {};
+    const chave = 'refresh:' + (opcoes.chave || location.pathname);
+    const minimo = opcoes.minimoSegundos || 0;
+    const lista = opcoes.opcoes || OPCOES_REFRESH;
+
+    let segundos = opcoes.padraoSegundos || 0;
+    try {
+        const salvo = localStorage.getItem(chave);
+        if (salvo !== null) segundos = parseInt(salvo, 10) || 0;
+    } catch (e) { /* modo privativo: vale o padrão */ }
+    if (segundos && minimo) segundos = Math.max(segundos, minimo);
+
+    let timer = null;
+    let emVoo = false;
+
+    async function tick() {
+        if (emVoo || document.hidden) return;
+        emVoo = true;
+        try {
+            await fn();
+        } catch (e) {
+            // Uma falha de rede não pode matar o ciclo: o próximo tick tenta
+            // de novo, e o toast de erro já é responsabilidade de quem chama.
+            console.warn('atualização automática falhou:', e);
+        } finally {
+            emVoo = false;
+        }
+    }
+
+    function reagendar() {
+        if (timer) clearInterval(timer);
+        timer = segundos ? setInterval(tick, segundos * 1000) : null;
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && segundos) tick();
+    });
+
+    // Seletor. Nasce no elemento marcado com [data-refresh]; sem ele o ciclo
+    // roda igual, só sem controle na tela.
+    const alvo = document.querySelector('[data-refresh]');
+    if (alvo) {
+        const rotulo = document.createElement('label');
+        rotulo.className = 'refresh-seletor';
+        rotulo.innerHTML = '<span>Atualizar</span>';
+        const sel = document.createElement('select');
+        lista.filter((o) => !o.valor || !minimo || o.valor >= minimo)
+             .forEach((o) => {
+            const opt = document.createElement('option');
+            opt.value = String(o.valor);
+            opt.textContent = o.rotulo;
+            if (o.valor === segundos) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        sel.addEventListener('change', () => {
+            segundos = parseInt(sel.value, 10) || 0;
+            try { localStorage.setItem(chave, String(segundos)); } catch (e) {}
+            reagendar();
+            if (segundos) tick();
+        });
+        rotulo.appendChild(sel);
+        alvo.appendChild(rotulo);
+    }
+
+    reagendar();
+    return { agora: tick, intervalo: () => segundos };
+}

@@ -27,19 +27,27 @@ def insert_or_update_device(device_data: Dict[str, Any]) -> None:
         # nocao nenhuma de comodo. Nao adicione essas colunas la.
         local_id, comodo_id = _placement_padrao(conn)
 
+        # mapping_json e icon_url sao COALESCE/NULLIF pela mesma razao que ip e
+        # protocol_version: o scan de rede (app/scanner.py) nao conhece nem a
+        # especificacao de DPs nem o icone, e mandava '{}' e NULL por cima do
+        # que o devices.json tinha trazido. Isso apagava o `scale` de que a
+        # coleta depende -- as leituras voltavam a ser gravadas cruas.
         cursor.execute("""
             INSERT INTO devices
             (id, name, local_key, category, product_name, model, mapping_json,
-             is_sub, parent_id, ip, protocol_version, source, created_at, updated_at,
-             local_id, comodo_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             icon_url, is_sub, parent_id, ip, protocol_version, source,
+             created_at, updated_at, local_id, comodo_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name=excluded.name,
                 local_key=excluded.local_key,
                 category=excluded.category,
                 product_name=excluded.product_name,
                 model=excluded.model,
-                mapping_json=excluded.mapping_json,
+                mapping_json=COALESCE(
+                    NULLIF(NULLIF(excluded.mapping_json, '{}'), ''),
+                    mapping_json),
+                icon_url=COALESCE(NULLIF(excluded.icon_url, ''), icon_url),
                 is_sub=excluded.is_sub,
                 parent_id=excluded.parent_id,
                 ip=COALESCE(excluded.ip, ip),
@@ -54,6 +62,7 @@ def insert_or_update_device(device_data: Dict[str, Any]) -> None:
             device_data.get('product_name'),
             device_data.get('model'),
             json.dumps(device_data.get('mapping', {})),
+            device_data.get('icon'),
             1 if device_data.get('sub') else 0,
             device_data.get('parent'),
             device_data.get('ip'),
@@ -136,8 +145,17 @@ def get_latest_reading(device_id: str) -> Optional[Dict]:
 
 def get_readings_for_series(device_id: str, dps_code: str,
                            start_timestamp: str = None,
-                           end_timestamp: str = None) -> List[Dict]:
-    """Retorna leituras de um DP específico de um device em um período."""
+                           end_timestamp: str = None,
+                           max_pontos: int = None) -> List[Dict]:
+    """
+    Retorna leituras de um DP específico de um device em um período.
+
+    `max_pontos` afina a série mantendo 1 a cada k amostras. Trinta dias de um
+    inversor são ~4.500 pontos POR SÉRIE (ele mede a cada 5 min), e um gráfico
+    de 900 px não tem pixel para todos eles — mandar tudo só gasta banda e
+    trava o navegador. O primeiro e o último ponto são sempre preservados,
+    para o período começar e terminar onde deve.
+    """
     with get_db() as conn:
         cursor = conn.cursor()
         query = """
@@ -166,6 +184,13 @@ def get_readings_for_series(device_id: str, dps_code: str,
                     'timestamp': row_dict['collected_at'],
                     'value': value
                 })
+
+        if max_pontos and len(results) > max_pontos:
+            passo = len(results) / float(max_pontos)
+            afinado = [results[int(i * passo)] for i in range(max_pontos)]
+            if afinado[-1] is not results[-1]:
+                afinado[-1] = results[-1]
+            return afinado
         return results
 
 
@@ -251,7 +276,17 @@ def create_comparison_group(name: str, description: str = None,
             INSERT INTO comparison_groups (name, description, scope_local_id)
             VALUES (?, ?, ?)
         """, (name, description, scope_local_id))
-        return cursor.lastrowid
+        group_id = cursor.lastrowid
+        # Todo grupo nasce com um painel. A alternativa -- criar o primeiro
+        # painel na primeira serie -- deixaria um grupo vazio sem lugar para
+        # a serie ir, e a tela teria que lidar com um estado que nao precisa
+        # existir. E na mesma transacao: um grupo sem painel nunca chega ao
+        # disco.
+        cursor.execute("""
+            INSERT INTO comparison_panels (group_id, nome, principal, sort_order)
+            VALUES (?, 'Principal', 1, 0)
+        """, (group_id,))
+        return group_id
 
 
 def get_comparison_group(group_id: int) -> Optional[Dict]:
@@ -265,6 +300,12 @@ def get_comparison_group(group_id: int) -> Optional[Dict]:
 
         group_dict = dict(group)
         group_dict['series'] = _series_do_grupo(conn, group_dict)
+        # As duas visoes sobre as MESMAS series: 'series' plana (a lista de
+        # sempre, que a tela de grupos conta e o escopo percorre) e 'paineis'
+        # aninhada, que e o que a tela de detalhe desenha. Manter as duas
+        # evita reescrever quem so quer contar.
+        group_dict['paineis'] = _agrupar_em_paineis(
+            conn, group_id, group_dict['series'])
         group_dict['scope'] = (
             'geral' if group_dict.get('scope_local_id') is None else 'local'
         )
@@ -284,6 +325,9 @@ def get_all_comparison_groups() -> List[Dict]:
 
         for group in groups:
             group['series'] = _series_do_grupo(conn, group)
+            # A lista so precisa da CONTAGEM de paineis no card; montar a
+            # estrutura aninhada de cada grupo aqui seria trabalho jogado fora.
+            group['total_paineis'] = len(_paineis_do_grupo(conn, group['id']))
             group['scope'] = (
                 'geral' if group.get('scope_local_id') is None else 'local'
             )
@@ -296,13 +340,17 @@ def get_all_comparison_groups() -> List[Dict]:
 
 
 def add_series_to_group(group_id: int, device_id: str, dps_code: str,
-                       label: str, sort_order: int = 0) -> int:
+                       label: str, panel_id: Optional[int] = None) -> int:
     """
     Adiciona uma série a um grupo, respeitando o escopo do grupo.
 
     Grupo com escopo de local só aceita dispositivo daquele local. A checagem
     e o INSERT ficam na mesma conexão e na mesma transação de propósito: em
     conexões separadas haveria janela entre verificar e gravar.
+
+    Sem `panel_id`, a série cai no painel principal — é o que mantém quem
+    chama sem saber que painéis existem. A ordem dela é o fim da fila DAQUELE
+    painel, não do grupo.
     """
     with get_db() as conn:
         cursor = conn.cursor()
@@ -329,11 +377,17 @@ def add_series_to_group(group_id: int, device_id: str, dps_code: str,
                 group_scope_local_id=escopo,
             )
 
+        if panel_id is None:
+            panel_id = _painel_principal_id(conn, group_id)
+        else:
+            _exige_painel(conn, group_id, panel_id)
+
         cursor.execute("""
             INSERT INTO comparison_series
-            (group_id, device_id, dps_code, label, sort_order)
-            VALUES (?, ?, ?, ?, ?)
-        """, (group_id, device_id, dps_code, label, sort_order))
+            (group_id, device_id, dps_code, label, sort_order, panel_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (group_id, device_id, dps_code, label,
+              _proxima_ordem_no_painel(conn, panel_id), panel_id))
         return cursor.lastrowid
 
 
@@ -342,6 +396,8 @@ def delete_comparison_group(group_id: int) -> None:
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM comparison_series WHERE group_id = ?",
+                      (group_id,))
+        cursor.execute("DELETE FROM comparison_panels WHERE group_id = ?",
                       (group_id,))
         cursor.execute("DELETE FROM comparison_groups WHERE id = ?", (group_id,))
 
@@ -821,6 +877,266 @@ def get_devices_grouped_by_local(local_id: int = None) -> List[Dict]:
 
 
 # ---------------------------------------------------------------------------
+# Painéis: os gráficos dentro de um grupo
+#
+# Um grupo era um gráfico só, e um eixo Y só serve a UMA grandeza — potência em
+# W e geração em kWh no mesmo gráfico deixam a curva de kWh colada no chão.
+# Cada painel é um gráfico com o eixo dele.
+#
+# Duas invariantes valem SEMPRE, e valem aqui e não na tela, porque um POST
+# direto na API tem que esbarrar nelas igual:
+#
+#   1. todo grupo tem pelo menos um painel;
+#   2. exatamente um painel do grupo tem principal = 1.
+#
+# E uma regra de postura, a mesma que o escopo já segue: mexer no arranjo
+# nunca apaga série. Excluir um painel MOVE as séries dele para o principal.
+# ---------------------------------------------------------------------------
+
+def _paineis_do_grupo(conn, group_id: int) -> List[Dict]:
+    """
+    Os painéis de um grupo, na ordem em que a tela os desenha.
+
+    O principal vem primeiro sempre — é o gráfico que abre a página. Entre os
+    secundários vale o sort_order, com o id de desempate para a ordem nunca
+    depender de sorte.
+    """
+    return [dict(r) for r in conn.execute(
+        """SELECT * FROM comparison_panels WHERE group_id = ?
+           ORDER BY principal DESC, sort_order, id""", (group_id,))]
+
+
+def _painel_principal_id(conn, group_id: int) -> Optional[int]:
+    """
+    O painel principal do grupo.
+
+    O fallback para o primeiro por ordem não é decoração: um grupo criado
+    antes da migração, ou um principal apagado fora do app, não pode deixar as
+    séries sem destino.
+    """
+    row = conn.execute(
+        """SELECT id FROM comparison_panels WHERE group_id = ?
+           ORDER BY principal DESC, sort_order, id LIMIT 1""",
+        (group_id,)).fetchone()
+    return row[0] if row else None
+
+
+def _exige_painel(conn, group_id: int, painel_id: int) -> Dict:
+    """
+    O painel, contanto que ele seja DESTE grupo.
+
+    A checagem de dono é o que impede mover uma série para o painel de outro
+    grupo passando o id na mão — a tela nunca ofereceria isso, a API sim.
+    """
+    row = conn.execute(
+        "SELECT * FROM comparison_panels WHERE id = ? AND group_id = ?",
+        (painel_id, group_id)).fetchone()
+    if row is None:
+        raise NotFoundError("Painel %s não encontrado neste grupo" % painel_id)
+    return dict(row)
+
+
+def _exige_serie(conn, group_id: int, series_id: int) -> Dict:
+    """A série, contanto que ela seja deste grupo. Mesma razão de _exige_painel."""
+    row = conn.execute(
+        "SELECT * FROM comparison_series WHERE id = ? AND group_id = ?",
+        (series_id, group_id)).fetchone()
+    if row is None:
+        raise NotFoundError("Série %s não encontrada neste grupo" % series_id)
+    return dict(row)
+
+
+def _proxima_ordem_no_painel(conn, painel_id: int) -> int:
+    row = conn.execute(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM comparison_series"
+        " WHERE panel_id = ?", (painel_id,)).fetchone()
+    return row[0]
+
+
+def _agrupar_em_paineis(conn, group_id: int, series: List[Dict]) -> List[Dict]:
+    """
+    A lista plana de séries distribuída nos painéis do grupo.
+
+    Série com panel_id nulo cai no principal. Isso é defensivo — a migração
+    005 preencheu todas —, mas uma série órfã sumindo da tela seria a pior
+    forma possível de descobrir que o vínculo se perdeu.
+    """
+    paineis = _paineis_do_grupo(conn, group_id)
+    if not paineis:
+        return []
+
+    por_id = {p["id"]: p for p in paineis}
+    for painel in paineis:
+        painel["series"] = []
+
+    principal = por_id[_painel_principal_id(conn, group_id)]
+    for serie in series:
+        destino = por_id.get(serie.get("panel_id")) or principal
+        destino["series"].append(serie)
+    return paineis
+
+
+def create_panel(group_id: int, nome: str) -> Dict:
+    """Cria um painel secundário no grupo. O nome é único dentro do grupo."""
+    with get_db() as conn:
+        if conn.execute("SELECT 1 FROM comparison_groups WHERE id = ?",
+                        (group_id,)).fetchone() is None:
+            raise NotFoundError("Grupo %s não encontrado" % group_id)
+        nome = _nome_limpo(nome, "nome do painel")
+        ordem = conn.execute(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM comparison_panels"
+            " WHERE group_id = ?", (group_id,)).fetchone()[0]
+        painel_id = conn.execute(
+            """INSERT INTO comparison_panels (group_id, nome, principal, sort_order)
+               VALUES (?, ?, 0, ?)""", (group_id, nome, ordem)).lastrowid
+        return _exige_painel(conn, group_id, painel_id)
+
+
+def update_panel(group_id: int, painel_id: int, nome: str = None,
+                 principal: bool = None) -> Dict:
+    """
+    Renomeia o painel e/ou o torna principal.
+
+    Promover um painel rebaixa o anterior NA MESMA transação — é isso que
+    mantém a invariante de um principal por grupo. Não há como "desmarcar" o
+    principal: alguém tem que abrir a página.
+    """
+    with get_db() as conn:
+        _exige_painel(conn, group_id, painel_id)
+
+        if nome is not None:
+            conn.execute("UPDATE comparison_panels SET nome = ? WHERE id = ?",
+                         (_nome_limpo(nome, "nome do painel"), painel_id))
+
+        if principal:
+            conn.execute(
+                "UPDATE comparison_panels SET principal = 0 WHERE group_id = ?",
+                (group_id,))
+            conn.execute(
+                "UPDATE comparison_panels SET principal = 1 WHERE id = ?",
+                (painel_id,))
+
+        return _exige_painel(conn, group_id, painel_id)
+
+
+def delete_panel(group_id: int, painel_id: int) -> Dict:
+    """
+    Exclui um painel e MOVE as séries dele para o principal.
+
+    Nenhuma série é apagada aqui, de propósito: rearranjar gráficos e perder
+    histórico são coisas diferentes, e a segunda nunca deve ser efeito
+    colateral da primeira. Excluir o principal promove o próximo antes de
+    mover — e o último painel de um grupo não pode ser excluído, senão as
+    séries ficariam sem destino.
+    """
+    with get_db() as conn:
+        _exige_painel(conn, group_id, painel_id)
+        restantes = [p for p in _paineis_do_grupo(conn, group_id)
+                     if p["id"] != painel_id]
+        if not restantes:
+            raise ValidationError(
+                "Este é o único painel do grupo — um grupo precisa de pelo "
+                "menos um gráfico. Crie outro painel antes de excluir este.")
+
+        destino = restantes[0]
+        conn.execute("UPDATE comparison_panels SET principal = 1 WHERE id = ?",
+                     (destino["id"],))
+        cur = conn.execute(
+            "UPDATE comparison_series SET panel_id = ? WHERE panel_id = ?",
+            (destino["id"], painel_id))
+        conn.execute("DELETE FROM comparison_panels WHERE id = ?", (painel_id,))
+        return {"deleted": True, "series_movidas": cur.rowcount,
+                "destino_id": destino["id"], "destino_nome": destino["nome"]}
+
+
+def reordenar_paineis(group_id: int, ordem: List[int]) -> List[Dict]:
+    """
+    Aplica a ordem dos painéis de uma vez.
+
+    Recebe a lista inteira, e não um "sobe um": a reordenação vira uma escrita
+    só, idempotente, sem estado intermediário se alguém clicar rápido. Ids que
+    não são do grupo são recusados; painéis fora da lista vão para o fim, na
+    ordem que já tinham.
+    """
+    with get_db() as conn:
+        atuais = _paineis_do_grupo(conn, group_id)
+        if not atuais:
+            raise NotFoundError("Grupo %s não encontrado" % group_id)
+
+        conhecidos = {p["id"] for p in atuais}
+        vistos, fila = set(), []
+        for painel_id in ordem:
+            painel_id = int(painel_id)
+            if painel_id not in conhecidos:
+                raise NotFoundError(
+                    "Painel %s não encontrado neste grupo" % painel_id)
+            if painel_id not in vistos:
+                vistos.add(painel_id)
+                fila.append(painel_id)
+        fila += [p["id"] for p in atuais if p["id"] not in vistos]
+
+        for posicao, painel_id in enumerate(fila):
+            conn.execute(
+                "UPDATE comparison_panels SET sort_order = ? WHERE id = ?",
+                (posicao, painel_id))
+        return _paineis_do_grupo(conn, group_id)
+
+
+def update_series(group_id: int, series_id: int, label: str = None,
+                  panel_id=_NAO_INFORMADO) -> Dict:
+    """
+    Renomeia a série e/ou a move para outro painel.
+
+    Mudar de painel joga a série para o fim da fila do destino — inserir no
+    meio seria adivinhar onde ela deve ficar, e reordenar já existe para isso.
+    """
+    with get_db() as conn:
+        _exige_serie(conn, group_id, series_id)
+
+        if label is not None:
+            conn.execute("UPDATE comparison_series SET label = ? WHERE id = ?",
+                         (_nome_limpo(label, "rótulo da série"), series_id))
+
+        if panel_id is not _NAO_INFORMADO:
+            destino = (_painel_principal_id(conn, group_id) if panel_id is None
+                       else _exige_painel(conn, group_id, int(panel_id))["id"])
+            conn.execute(
+                "UPDATE comparison_series SET panel_id = ?, sort_order = ?"
+                " WHERE id = ?",
+                (destino, _proxima_ordem_no_painel(conn, destino), series_id))
+
+        return _exige_serie(conn, group_id, series_id)
+
+
+def reordenar_series(group_id: int, ordem: List[int]) -> None:
+    """
+    Aplica a ordem das séries de uma vez, como reordenar_paineis.
+
+    A ordem é global no grupo, não por painel: o SELECT de _series_do_grupo
+    ordena por sort_order antes de distribuir nos painéis, e a ordem relativa
+    dentro de cada painel é preservada por consequência.
+    """
+    with get_db() as conn:
+        conhecidos = {row[0] for row in conn.execute(
+            "SELECT id FROM comparison_series WHERE group_id = ?", (group_id,))}
+        vistos, fila = set(), []
+        for series_id in ordem:
+            series_id = int(series_id)
+            if series_id not in conhecidos:
+                raise NotFoundError(
+                    "Série %s não encontrada neste grupo" % series_id)
+            if series_id not in vistos:
+                vistos.add(series_id)
+                fila.append(series_id)
+        fila += sorted(conhecidos - vistos)
+
+        for posicao, series_id in enumerate(fila):
+            conn.execute(
+                "UPDATE comparison_series SET sort_order = ? WHERE id = ?",
+                (posicao, series_id))
+
+
+# ---------------------------------------------------------------------------
 # Escopo dos grupos comparativos
 # ---------------------------------------------------------------------------
 
@@ -843,7 +1159,7 @@ def _series_do_grupo(conn, grupo: Dict) -> List[Dict]:
         LEFT JOIN comodos c ON c.id = d.comodo_id
         LEFT JOIN locais  l ON l.id = d.local_id
         WHERE s.group_id = ?
-        ORDER BY s.sort_order
+        ORDER BY s.sort_order, s.id
     """, (grupo['id'],)).fetchall()
 
     escopo = grupo.get('scope_local_id')

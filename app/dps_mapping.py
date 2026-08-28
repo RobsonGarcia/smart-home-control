@@ -167,30 +167,78 @@ def _codigo_nomeado(dps_code: str, category: Optional[str],
     return DPS_ENERGIA_NUMERICOS.get(dps_code)
 
 
+def _spec_do_mapping(dps_code: str, mapping: Optional[dict]) -> dict:
+    """
+    `unit` e `scale` que o Tuya declara para ESTE DP neste aparelho.
+
+    A unidade da tabela DPS_NOMEADOS é a do código em geral; a do mapping é a
+    do aparelho na sua frente. Quando as duas existem, a do aparelho vence —
+    mas ela vem vazia com frequência (`add_ele` publica `unit: ""` e mede em
+    kWh), e aí a tabela é quem sabe.
+    """
+    entrada = (mapping or {}).get(dps_code)
+    if not isinstance(entrada, dict):
+        return {}
+    valores = entrada.get("values")
+    if not isinstance(valores, dict):
+        return {}
+
+    spec = {}
+    unidade = str(valores.get("unit") or "").strip()
+    if unidade:
+        spec["unit"] = unidade
+    try:
+        escala = int(valores.get("scale") or 0)
+    except (TypeError, ValueError):
+        escala = 0
+    if escala > 0:
+        spec["scale"] = escala
+    return spec
+
+
 def get_dp_info(dps_code: str, category: str = None,
                 mapping: dict = None) -> dict:
     """
     Informações de um DP. Passe `category` e/ou o `mapping` do dispositivo
     sempre que tiver — sem eles, um DP numérico baixo é ambíguo e a função
     devolve um rótulo neutro em vez de chutar.
+
+    `scale` sai daqui junto do resto porque quem mostra o número é quem
+    precisa saber em quantas casas mostrá-lo: o expoente do Tuya é, na prática,
+    a precisão do aparelho (scale 1 -> 126,5 V).
     """
     dps_code = str(dps_code)
     nomeado = _codigo_nomeado(dps_code, category, mapping)
+    spec = _spec_do_mapping(dps_code, mapping)
 
     if nomeado and nomeado in DPS_NOMEADOS:
         info = dict(DPS_NOMEADOS[nomeado])
         info["code"] = nomeado
-        return info
+    elif nomeado:
+        # Código nomeado que não está na tabela: o próprio código já é mais
+        # informativo que "DP 3".
+        info = {"name": nomeado, "unit": "valor", "type": "unknown",
+                "code": nomeado}
+    else:
+        info = dict(DESCONHECIDO)
+        info["name"] = "DP %s" % dps_code if dps_code.isdigit() else dps_code
+        info["code"] = dps_code
 
-    # Código nomeado que não está na tabela: o próprio código já é mais
-    # informativo que "DP 3".
-    if nomeado:
-        return {"name": nomeado, "unit": "valor", "type": "unknown", "code": nomeado}
-
-    info = dict(DESCONHECIDO)
-    info["name"] = "DP %s" % dps_code if dps_code.isdigit() else dps_code
-    info["code"] = dps_code
+    info.setdefault("scale", 0)
+    info.update(spec)
     return info
+
+
+def unidade_exibivel(info: dict) -> str:
+    """
+    A unidade que faz sentido AO LADO DE UM NÚMERO — só a de grandeza real.
+
+    A tabela guarda "on/off" para interruptor e "valor" para DP desconhecido,
+    e isso é útil no seletor de série ("Interruptor 1 (on/off)"). Ao lado de
+    um número vira ruído: "1 on/off" e "724 valor" não dizem nada. Grandeza
+    de verdade tem unidade; estado não tem.
+    """
+    return (info.get("unit") or "") if info.get("type") == "numeric" else ""
 
 
 def get_friendly_name(dps_code: str, category: str = None,
@@ -220,6 +268,7 @@ def get_device_dps_list(mapping: dict = None, category: str = None) -> list:
             "code": codigo,
             "name": info["name"],
             "unit": info.get("unit", ""),
+            "scale": info.get("scale", 0),
             "type": info.get("type", "unknown"),
             "tuya_code": info.get("code"),
         })

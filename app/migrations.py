@@ -21,7 +21,7 @@ from app.db import get_connection
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 5
 
 
 # Lista, nao um script: conn.executescript() faz COMMIT implicito da
@@ -352,7 +352,82 @@ def _migracao_003(conn):
         conn.execute(ddl)
 
 
-MIGRACOES = {1: _migracao_001, 2: _migracao_002, 3: _migracao_003}
+# Paineis: o nivel que faltava entre o grupo e a serie. Mesma regra de sempre
+# -- lista, nao script, para nao quebrar o BEGIN IMMEDIATE de _aplicar().
+_DDL_PAINEIS = [
+    """CREATE TABLE IF NOT EXISTS comparison_panels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id INTEGER NOT NULL REFERENCES comparison_groups(id),
+        nome TEXT NOT NULL,
+        principal INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""",
+    """CREATE UNIQUE INDEX IF NOT EXISTS idx_comparison_panels_nome
+        ON comparison_panels(group_id, nome COLLATE NOCASE)""",
+    """CREATE INDEX IF NOT EXISTS idx_comparison_panels_group
+        ON comparison_panels(group_id, sort_order)""",
+    """CREATE INDEX IF NOT EXISTS idx_comparison_series_panel
+        ON comparison_series(panel_id, sort_order)""",
+]
+
+
+def _migracao_005(conn):
+    """
+    Paineis dentro de um grupo de energia.
+
+    Um grupo era um grafico so, e um eixo Y so serve a uma grandeza: as duas
+    series de geracao em kWh ficavam coladas no chao ao lado das de potencia
+    em W. Agora cada painel e um grafico, com o eixo dele.
+
+    O backfill e o que faz os grupos existentes continuarem IDENTICOS: cada um
+    ganha um painel "Principal" com todas as suas series dentro. Ninguem abre
+    o painel depois da migracao e encontra a tela rearranjada.
+    """
+    for ddl in _DDL_PAINEIS[:3]:
+        conn.execute(ddl)
+
+    _add_coluna(conn, "comparison_series", "panel_id",
+                "INTEGER REFERENCES comparison_panels(id)")
+    # O indice de panel_id so pode nascer depois da coluna existir.
+    conn.execute(_DDL_PAINEIS[3])
+
+    grupos = [row[0] for row in
+              conn.execute("SELECT id FROM comparison_groups")]
+    series_movidas = 0
+    for group_id in grupos:
+        row = conn.execute(
+            "SELECT id FROM comparison_panels WHERE group_id = ?"
+            " ORDER BY principal DESC, sort_order, id LIMIT 1",
+            (group_id,)).fetchone()
+        painel_id = row[0] if row else conn.execute(
+            "INSERT INTO comparison_panels (group_id, nome, principal,"
+            " sort_order) VALUES (?, 'Principal', 1, 0)",
+            (group_id,)).lastrowid
+        cur = conn.execute(
+            "UPDATE comparison_series SET panel_id = ?"
+            " WHERE group_id = ? AND panel_id IS NULL",
+            (painel_id, group_id))
+        series_movidas += cur.rowcount
+
+    logger.info("migração 005: %d grupos ganharam painel 'Principal', "
+                "%d séries vinculadas", len(grupos), series_movidas)
+
+
+def _migracao_004(conn):
+    """
+    Imagem do produto.
+
+    O `icon` do devices.json sempre existiu no arquivo e nunca teve onde
+    morar. Coluna simples, sem backfill: ela se preenche sozinha na próxima
+    importação do devices.json, e enquanto estiver vazia a tela usa o ícone
+    SVG por tipo, como sempre usou.
+    """
+    _add_coluna(conn, "devices", "icon_url", "TEXT")
+
+
+MIGRACOES = {1: _migracao_001, 2: _migracao_002, 3: _migracao_003,
+             4: _migracao_004, 5: _migracao_005}
 
 
 def run_migrations(max_wait_seconds: int = 20) -> int:

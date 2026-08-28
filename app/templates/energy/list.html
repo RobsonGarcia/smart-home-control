@@ -36,7 +36,7 @@
     <div class="group-card" data-escopo="{{ group.scope_local_id or 'geral' }}">
         <div class="topo">
             {{ m.selo_escopo(group) }}
-            <span class="group-stats">{{ group.series|length }} série{{ 's' if group.series|length != 1 }}</span>
+            <span class="group-stats">{{ group.series|length }} série{{ 's' if group.series|length != 1 }}{% if group.total_paineis and group.total_paineis > 1 %} · {{ group.total_paineis }} painéis{% endif %}</span>
         </div>
 
         <h3><a href="/energy/{{ group.id }}">{{ group.name }}</a></h3>

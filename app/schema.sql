@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS devices (
     product_name TEXT,
     model TEXT,
     mapping_json TEXT,
+    -- Imagem do produto publicada pelo Tuya (campo `icon` do devices.json).
+    -- E uma URL do CDN deles: some numa rede sem internet, e a tela cai no
+    -- icone SVG por tipo. Por isso nada depende dela.
+    icon_url TEXT,
     is_sub INTEGER DEFAULT 0,
     parent_id TEXT,
     ip TEXT,
@@ -168,6 +172,24 @@ CREATE TABLE IF NOT EXISTS comparison_groups (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Paineis de um grupo: cada um e um GRAFICO, com as series dele.
+-- Existem porque um eixo Y so serve a uma grandeza: potencia em W e geracao
+-- em kWh no mesmo grafico deixam a curva de kWh colada no chao. Exatamente um
+-- painel por grupo tem principal=1 -- ele abre a pagina; os outros vem abaixo,
+-- na ordem de sort_order.
+CREATE TABLE IF NOT EXISTS comparison_panels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL REFERENCES comparison_groups(id),
+    nome TEXT NOT NULL,
+    principal INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_comparison_panels_nome
+    ON comparison_panels(group_id, nome COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_comparison_panels_group
+    ON comparison_panels(group_id, sort_order);
+
 -- Séries dentro de um grupo comparativo
 CREATE TABLE IF NOT EXISTS comparison_series (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,6 +198,8 @@ CREATE TABLE IF NOT EXISTS comparison_series (
     dps_code TEXT NOT NULL,
     label TEXT NOT NULL,
     sort_order INTEGER DEFAULT 0,
+    -- Em qual grafico do grupo esta serie aparece. NULL cai no principal.
+    panel_id INTEGER REFERENCES comparison_panels(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (group_id) REFERENCES comparison_groups(id),
     FOREIGN KEY (device_id) REFERENCES devices(id)
@@ -188,6 +212,8 @@ CREATE INDEX IF NOT EXISTS idx_discovery_log_device_timestamp
     ON discovery_log(device_id, timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_comparison_series_group
     ON comparison_series(group_id);
+CREATE INDEX IF NOT EXISTS idx_comparison_series_panel
+    ON comparison_series(panel_id, sort_order);
 
 -- Os indices que dependem das colunas novas (devices.local_id/comodo_id e
 -- comparison_groups.scope_local_id) sao criados em app/migrations.py, depois

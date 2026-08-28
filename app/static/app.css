@@ -1183,3 +1183,111 @@ select option { background: var(--surface); color: var(--text); }
     font-size: 10.5px;
     color: var(--text-5);
 }
+
+/* ------------------------------------- atualização automática e imagem real */
+
+/* Seletor de refresh: fica ao lado dos outros controles do cabeçalho e tem
+   que sumir visualmente — ninguém abre o painel para olhar para ele. */
+.refresh-seletor {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--text-2);
+}
+
+.refresh-seletor select {
+    padding: 4px 8px;
+    border-radius: 7px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12.5px;
+}
+
+/* Foto do produto vinda do CDN do Tuya, SOBRE o ícone SVG por tipo — o SVG
+   fica embaixo e reaparece quando o onerror remove a imagem (CDN fora, rede
+   sem internet). A placa clara existe porque os renders chegam de dois
+   jeitos: uns com fundo transparente, outros com fundo branco sólido. Sem
+   ela, uns apareceriam como um quadrado branco no tema escuro e outros não. */
+.device-icone, .device-avatar-grande { position: relative; }
+
+.device-foto {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: inherit;
+    background: #eef1f5;
+    padding: 3px;
+    display: block;
+}
+
+.device-avatar-grande {
+    width: 46px;
+    height: 46px;
+    border-radius: 11px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--line);
+    color: var(--text-2);
+}
+
+/* --------------------------------------------------------- painéis do grupo */
+
+/* Cada painel é um gráfico com o eixo dele. Existem porque um eixo Y só serve
+   a uma grandeza: potência em W e geração em kWh no mesmo gráfico deixam a
+   curva de kWh colada no chão. */
+.painel + .painel { margin-top: 34px; }
+
+.painel-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 4px;
+}
+
+.painel-head h2 {
+    margin: 0;
+    font-size: 17px;
+    letter-spacing: -0.01em;
+}
+
+/* A linha que estica entre o título e as ações — mesmo recurso do
+   .section-rule, para os dois cabeçalhos lerem como a mesma coisa. */
+.painel-head .rule {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+    min-width: 20px;
+}
+
+.painel-acoes,
+.serie-acoes {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+/* A coluna de ações encolhe até caber e não quebra: sem isto a tabela
+   distribui a largura por igual e o seletor de painel vira "Prin…". */
+.col-acoes { width: 1%; white-space: nowrap; }
+
+.serie-acoes .select-inline {
+    min-width: 116px;
+    max-width: 170px;
+}
+
+/* Selo do painel que abre a página. Discreto de propósito: informa qual é,
+   sem competir com o nome. */
+.badge.principal {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--line-strong);
+    color: var(--text-2);
+}

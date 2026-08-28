@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional
 
 from app.dps_mapping import DPS_POR_CATEGORIA, get_dp_info
 from app.errors import ValidationError
+from app.escala import escalar_faixa, reverter_valor
 
 # --------------------------------------------------------------------------
 # Tipos: o que o aparelho É, em português, com o ícone que o representa.
@@ -182,7 +183,14 @@ _TIPOS_CONTROLAVEIS = {"boolean", "integer", "enum", "value"}
 
 @dataclass
 class Acao:
-    """Uma capacidade acionável de um dispositivo, já em vocabulário nosso."""
+    """
+    Uma capacidade acionável de um dispositivo, já em vocabulário nosso.
+
+    `valores` (min/max/step) vem em unidade REAL, igual ao que a leitura
+    mostra — quem converte para o inteiro cru do aparelho é `validar_valor`,
+    na última barreira antes do pacote sair. Uma faixa crua ao lado de um
+    valor escalado faria o campo nascer fora dos próprios limites.
+    """
     dp: str                       # a chave que vai no comando (DP ou código IR)
     code: str                     # código canônico ("switch_1")
     nome: str                     # rótulo em português
@@ -190,11 +198,14 @@ class Acao:
     classe: str                   # atuacao | ajuste | movimento
     valores: Dict[str, Any] = field(default_factory=dict)
     opcoes: List[dict] = field(default_factory=list)   # [{valor, rotulo}]
+    escala: int = 0               # expoente do `scale` do Tuya (0 = sem escala)
+    unidade: str = ""
 
     def to_dict(self) -> dict:
         return {"dp": self.dp, "code": self.code, "nome": self.nome,
                 "tipo": self.tipo, "classe": self.classe,
-                "valores": self.valores, "opcoes": self.opcoes}
+                "valores": self.valores, "opcoes": self.opcoes,
+                "escala": self.escala, "unidade": self.unidade}
 
 
 def _mapping(device) -> dict:
@@ -305,7 +316,8 @@ def acoes_do_dispositivo(device) -> List[Acao]:
     for dp, entrada in mapping.items():
         if not isinstance(entrada, dict):
             continue
-        code = get_dp_info(dp, categoria, mapping).get("code") or str(dp)
+        info = get_dp_info(dp, categoria, mapping)
+        code = info.get("code") or str(dp)
         if code in BLOQUEADAS or code not in ACOES:
             continue
 
@@ -315,8 +327,8 @@ def acoes_do_dispositivo(device) -> List[Acao]:
         if tipo == "value":
             tipo = "integer"
 
-        valores = entrada.get("values")
-        valores = dict(valores) if isinstance(valores, dict) else {}
+        escala = int(info.get("scale") or 0)
+        valores = escalar_faixa(entrada.get("values"), escala)
         # Infravermelho declara a faixa como min/max sem 'range'; vira enum
         # numérico para a tela ter o que mostrar.
         if tipo == "enum" and "range" not in valores and "min" in valores:
@@ -333,6 +345,8 @@ def acoes_do_dispositivo(device) -> List[Acao]:
             classe=catalogo["classe"],
             valores=valores,
             opcoes=_opcoes(code, valores) if tipo == "enum" else [],
+            escala=escala,
+            unidade=info.get("unit") or "",
         ))
 
     ordem = {"atuacao": 0, "movimento": 1, "ajuste": 2}
@@ -376,19 +390,24 @@ def validar_valor(acao: Acao, valor: Any) -> Any:
                                   % (acao.nome, ", ".join(permitidos)))
         return texto
 
-    # integer
+    # integer. Sem escala o valor JÁ é o que o aparelho aceita e tem que ser
+    # inteiro; com escala ele chega em unidade real (12,5 V) e vira inteiro
+    # só depois de reverter.
     try:
-        numero = int(valor)
+        numero = float(valor) if acao.escala else int(valor)
     except (TypeError, ValueError):
-        raise ValidationError("'%s' espera um número inteiro." % acao.nome)
+        raise ValidationError("'%s' espera um número%s."
+                              % (acao.nome, "" if acao.escala else " inteiro"))
 
     minimo = acao.valores.get("min")
     maximo = acao.valores.get("max")
-    if minimo is not None and numero < int(minimo):
+    if minimo is not None and numero < float(minimo):
         raise ValidationError("'%s' aceita no mínimo %s." % (acao.nome, minimo))
-    if maximo is not None and numero > int(maximo):
+    if maximo is not None and numero > float(maximo):
         raise ValidationError("'%s' aceita no máximo %s." % (acao.nome, maximo))
-    return numero
+    # O aparelho só entende o inteiro deslocado — a conversão de volta é a
+    # última coisa que acontece antes do pacote sair.
+    return reverter_valor(numero, acao.escala) if acao.escala else numero
 
 
 def acao_principal(device) -> Optional[Acao]:

@@ -25,6 +25,7 @@ from typing import Optional
 from app.capacidades import acao_por_dp, validar_valor
 from app.config import ONLINE_WINDOW_MINUTES
 from app.errors import ComandoError, NotFoundError, ValidationError
+from app.escala import aplicar, aplicar_valor, escalas_do_device
 from app.repository import (
     get_device,
     get_latest_reading,
@@ -87,31 +88,39 @@ def executar_comando(device_id: str, dp: str, valor, origem: str = "painel"):
         raise ValidationError(
             "'%s' não aceita o comando '%s'." % (device["name"], dp))
 
+    # `validar_valor` devolve o valor CRU: é o inteiro deslocado que o
+    # aparelho aceita. Tudo que é para humano — log de comando, leitura
+    # gravada, resposta da API — usa a versão em unidade real.
     valor = validar_valor(acao, valor)
+    valor_real = aplicar_valor(valor, acao.escala)
     transporte = transporte_para(device)
 
     try:
         dps_resposta = transporte.enviar(device, acao, valor)
     except ComandoError as exc:
-        registrar_comando(device_id, acao.dp, acao.code, valor,
+        registrar_comando(device_id, acao.dp, acao.code, valor_real,
                           transporte.id, ok=False, erro=str(exc.message),
                           origem=origem)
         raise
 
-    registrar_comando(device_id, acao.dp, acao.code, valor, transporte.id,
+    registrar_comando(device_id, acao.dp, acao.code, valor_real, transporte.id,
                       ok=True, origem=origem)
 
     # Releitura: o painel tem que mostrar o estado NOVO agora, sem esperar o
     # próximo ciclo do coletor. A resposta do próprio comando às vezes já traz
     # os DPs; quando não traz, vale uma leitura completa.
-    dps = dps_resposta or transporte.ler(device)
+    # O que volta do aparelho é cru, como tudo que ele fala; `_quadro_recente`
+    # já vem escalado do banco. Escalar antes do merge é o que impede um
+    # toque no botão de injetar um ponto cru no meio da série.
+    dps = aplicar(dps_resposta or transporte.ler(device),
+                  escalas_do_device(device))
     estado = _quadro_recente(device_id)
     if dps:
         estado.update(dps)
     else:
-        estado[str(acao.dp)] = valor
+        estado[str(acao.dp)] = valor_real
         logger.info("comando em %s enviado sem confirmação de estado; "
-                    "assumindo %s=%s", device_id, acao.dp, valor)
+                    "assumindo %s=%s", device_id, acao.dp, valor_real)
 
     if estado:
         insert_reading(device_id, json.dumps(estado), True)
@@ -121,7 +130,7 @@ def executar_comando(device_id: str, dp: str, valor, origem: str = "painel"):
         "dp": acao.dp,
         "code": acao.code,
         "nome": acao.nome,
-        "valor": valor,
+        "valor": valor_real,
         "transporte": transporte.id,
         "confirmado": bool(dps),
         "dps": estado,

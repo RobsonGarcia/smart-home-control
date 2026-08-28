@@ -9,6 +9,7 @@
 <button class="btn btn-primary" onclick="abrirConfigurador()">
     {{ m.icone_svg('mais') }} Nova integração
 </button>
+<span data-refresh></span>
 {% endblock %}
 
 {% block content %}
@@ -418,18 +419,30 @@ async function atualizarIntervalo(deviceId, valor) {
 }
 
 // Resumo das plantas, sem segurar o carregamento da página.
-document.querySelectorAll('[data-resumo]').forEach(async (bloco) => {
-    try {
-        const r = await apiGet('/solar/api/integracoes/' + bloco.dataset.resumo + '/resumo');
-        const kw = r.potencia_w >= 10000;
-        bloco.querySelector('[data-r="potencia"]').textContent =
-            kw ? numero(r.potencia_w / 1000, 2) + ' kW' : numero(r.potencia_w, 0) + ' W';
-        bloco.querySelector('[data-r="hoje"]').textContent = numero(r.geracao_hoje_kwh, 1) + ' kWh';
-        bloco.querySelector('[data-r="mes"]').textContent = numero(r.geracao_mes_kwh, 1) + ' kWh';
-        bloco.querySelector('[data-r="total"]').textContent = numero(r.geracao_total_kwh, 1) + ' kWh';
-    } catch (erro) {
-        // Cloud fora do ar não é erro da página — os tiles ficam em "—".
-    }
+async function carregarResumos() {
+    const blocos = document.querySelectorAll('[data-resumo]');
+    await Promise.all(Array.from(blocos).map(async (bloco) => {
+        try {
+            const r = await apiGet('/solar/api/integracoes/' + bloco.dataset.resumo + '/resumo');
+            const kw = r.potencia_w >= 10000;
+            bloco.querySelector('[data-r="potencia"]').textContent =
+                kw ? numero(r.potencia_w / 1000, 2) + ' kW' : numero(r.potencia_w, 0) + ' W';
+            bloco.querySelector('[data-r="hoje"]').textContent = numero(r.geracao_hoje_kwh, 1) + ' kWh';
+            bloco.querySelector('[data-r="mes"]').textContent = numero(r.geracao_mes_kwh, 1) + ' kWh';
+            bloco.querySelector('[data-r="total"]').textContent = numero(r.geracao_total_kwh, 1) + ' kWh';
+        } catch (erro) {
+            // Cloud fora do ar não é erro da página — os tiles ficam em "—".
+        }
+    }));
+}
+
+carregarResumos();
+
+// Este resumo é uma chamada AO VIVO na nuvem do fabricante, não uma leitura do
+// banco: cada tick gasta requisição da conta. Daí o piso de 1 minuto, mais alto
+// que o das telas que só leem o que o coletor já trouxe.
+autoAtualizar(carregarResumos, {
+    chave: 'solar-lista', padraoSegundos: 300, minimoSegundos: 60
 });
 </script>
 {% endblock %}

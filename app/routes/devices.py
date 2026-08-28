@@ -56,25 +56,22 @@ async def devices_list(request: Request):
     )
 
 
-@router.get("/{device_id}", response_class=HTMLResponse)
-async def device_detail(device_id: str, request: Request):
-    """Detalhe de um dispositivo específico."""
-    from datetime import datetime, timedelta
-    import json
-    from app.dps_mapping import get_friendly_name
+def _dados_do_dispositivo(device_id: str):
+    """
+    Tudo que a tela de um dispositivo mostra, numa estrutura so.
 
-    template = request.app.templates.get_template("devices/detail.html")
+    Existe porque a mesma coisa e servida de duas formas: HTML na primeira
+    visita e JSON a cada atualizacao automatica. Duplicar o preparo seria
+    duplicar a chance de as duas divergirem.
+
+    Devolve None quando o dispositivo nao existe.
+    """
+    import json
+    from app.dps_mapping import get_dp_info, unidade_exibivel
 
     status = get_device_status(device_id)
     if not status:
-        # Rota HTML: devolve pagina, nao JSON. O `return x, 404` que estava
-        # aqui virava HTTP 200 com um array, porque FastAPI nao tem retorno
-        # em tupla estilo Flask.
-        return HTMLResponse(
-            "<h1>Dispositivo não encontrado</h1>"
-            "<p><a href=\"/devices\">Voltar</a></p>",
-            status_code=404,
-        )
+        return None
 
     # mapping_json do dispositivo: fonte autoritativa dos nomes de DP.
     device_mapping = {}
@@ -108,15 +105,21 @@ async def device_detail(device_id: str, request: Request):
                 # Considerar quantitativo se é número
                 if isinstance(value, (int, float)):
                     if dp_code not in dps_timeseries:
+                        # Categoria e mapping do proprio aparelho: sem
+                        # eles um DP numerico baixo e ambiguo (DP 1 e
+                        # "Interruptor 1" na tomada e "Temperatura" no
+                        # sensor) e o rotulo sairia errado.
+                        info = get_dp_info(
+                            dp_code,
+                            status['device'].get('category'),
+                            device_mapping)
                         dps_timeseries[dp_code] = {
-                            # Categoria e mapping do proprio aparelho: sem
-                            # eles um DP numerico baixo e ambiguo (DP 1 e
-                            # "Interruptor 1" na tomada e "Temperatura" no
-                            # sensor) e o rotulo sairia errado.
-                            'name': get_friendly_name(
-                                dp_code,
-                                status['device'].get('category'),
-                                device_mapping),
+                            'name': info['name'],
+                            # A unidade viaja junto do nome porque a leitura
+                            # ja esta escalada: sem ela o numero certo
+                            # aparece sem dizer do que e.
+                            'unit': unidade_exibivel(info),
+                            'scale': info.get('scale') or 0,
                             'data': []
                         }
                     dps_timeseries[dp_code]['data'].append({
@@ -131,10 +134,15 @@ async def device_detail(device_id: str, request: Request):
     # Ordem numerica de verdade: sorted() de string poe "19" antes de "2".
     ordenados = sorted(dps_timeseries.items(),
                        key=lambda kv: (not kv[0].isdigit(), kv[0].zfill(4)))
-    for idx, (dp_code, series) in enumerate(ordenados):
+    for dp_code, series in ordenados:
         chart_data.append({
             'code': dp_code,
             'label': series['name'],
+            'unit': series['unit'],
+            # Casas decimais = o proprio `scale` do Tuya, que na pratica e a
+            # precisao do aparelho. Sem escala declarada nao ha precisao a
+            # afirmar, e a tela decide pelo valor.
+            'casas': series['scale'] or None,
             'data': series['data'],
         })
 
@@ -155,17 +163,67 @@ async def device_detail(device_id: str, request: Request):
         dados['valor'] = ultimos_dps.get(acao.dp)
         acoes.append(dados)
 
+    return {'status': st, 'acoes': acoes, 'chart_data': chart_data}
+
+
+@router.get("/{device_id}", response_class=HTMLResponse)
+async def device_detail(device_id: str, request: Request):
+    """Detalhe de um dispositivo específico."""
+    import json
+
+    dados = _dados_do_dispositivo(device_id)
+    if dados is None:
+        # Rota HTML: devolve pagina, nao JSON. O `return x, 404` que estava
+        # aqui virava HTTP 200 com um array, porque FastAPI nao tem retorno
+        # em tupla estilo Flask.
+        return HTMLResponse(
+            "<h1>Dispositivo não encontrado</h1>"
+            "<p><a href=\"/devices\">Voltar</a></p>",
+            status_code=404,
+        )
+
+    st = dados['status']
+    template = request.app.templates.get_template("devices/detail.html")
     return template.render(
         request=request,
         device_status=st,
-        acoes=acoes,
+        acoes=dados['acoes'],
         tipos=TIPOS,
         transportes=[{'id': t.id, 'rotulo': t.rotulo, 'ok': v.ok,
                       'motivo': v.motivo}
-                     for t, v in transportes_de(status['device'])],
+                     for t, v in transportes_de(st['device'])],
         comandos=ultimos_comandos(device_id, 8),
-        chart_data=json.dumps(chart_data)
+        chart_data=json.dumps(dados['chart_data'])
     )
+
+
+@router.get("/{device_id}/api/estado")
+async def device_estado(device_id: str):
+    """
+    O mesmo conteudo da tela de detalhe, em JSON, para a atualizacao
+    automatica repintar sem recarregar a pagina.
+
+    O ritmo de quem chama sai daqui junto: um aparelho acionavel muda de
+    estado por ACAO e precisa de resposta rapida; um que so mede nao tem nada
+    de novo a dizer antes do proximo ciclo do coletor.
+    """
+    dados = _dados_do_dispositivo(device_id)
+    if dados is None:
+        raise NotFoundError("Dispositivo %s não encontrado" % device_id)
+
+    st = dados['status']
+    return {
+        'device_id': device_id,
+        'online': bool(st.get('is_online')),
+        'reading': st.get('reading'),
+        'acionavel': st.get('acionavel'),
+        'intervalo_sugerido': (
+            10 if st.get('acionavel')
+            else (st['config']['poll_interval_seconds'] or 60)),
+        'acoes': dados['acoes'],
+        'chart_data': dados['chart_data'],
+        'comandos': ultimos_comandos(device_id, 8),
+    }
 
 
 @router.post("/{device_id}/toggle")
